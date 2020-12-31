@@ -1,0 +1,107 @@
+import os
+import sys
+from os.path import dirname, join, abspath
+sys.path.append(abspath(join(dirname(__file__), '..')))
+######################################################
+
+from population.AFSA.AFSAMH_Real import AFSAMH_Real
+from population.SillyRandom.GreedyMH_Real import GreedyMH_Real
+from population.SillyRandom.GreedyMH_Real_WithLeap import GreedyMH_Real_WithLeap
+from population.PSO.PSOMH_Real import PSOMH_Real
+from population.PSO.PSOMH_Real_WithLeap import PSOMH_Real_WithLeap
+
+
+from problems.nphard_real.partition__and_subset_sum import Partition_Real, Subset_Real
+
+to_use = [
+    "AFSA",
+    "Greedy",
+    "GreedyWL",
+    "PSO",
+    "PSOWL"
+    ]
+
+partition_problem = Partition_Real(seed=0, num_dims=200)
+subset_problem = Subset_Real(seed=0, num_dims=200)
+
+
+problem_to_solve = "partition sum"
+#problem_to_solve = "subset sum"
+
+to_verbose = True
+
+if "AFSA" in to_use:
+    print("create afsa")
+    if problem_to_solve == "partition sum":
+        mh = AFSAMH_Real(partition_problem.min_x, partition_problem.max_x, partition_problem.ndim, False, partition_problem.objective_function, partition_problem.repair_function, partition_problem.preprocess_function)
+    if problem_to_solve == "subset sum":
+        mh = AFSAMH_Real(subset_problem.min_x, subset_problem.max_x, subset_problem.ndim, False, subset_problem.objective_function, subset_problem.repair_function, subset_problem.preprocess_function)
+    print("to run afsa")
+    fit, pt = mh.run(verbose=to_verbose, visual_distance_percentage=0.5, velocity_percentage=0.5, n_points_to_choose=3, crowded_percentage=0.7, its_stagnation=4, leap_percentage=0.3, stagnation_variation=0.4, seed=115)
+    print(fit)
+    print(pt)
+    if problem_to_solve == "partition sum":
+        partition_problem.print_difference_subsets(pt)
+    if problem_to_solve == "subset sum":
+        subset_problem.print_difference_subsets(pt)
+
+if "GreedyWL" in to_use:
+    print("create GreedyWL")
+    if problem_to_solve == "partition sum":
+        mh = GreedyMH_Real_WithLeap(partition_problem.min_x, partition_problem.max_x, partition_problem.ndim, False, partition_problem.objective_function, partition_problem.repair_function, partition_problem.preprocess_function)
+    if problem_to_solve == "subset sum":
+        mh = GreedyMH_Real_WithLeap(subset_problem.min_x, subset_problem.max_x, subset_problem.ndim, False, subset_problem.objective_function, subset_problem.repair_function, subset_problem.preprocess_function)
+    print("to run greedy")
+    fit, pt = mh.run(verbose=to_verbose, iterations=100, population=30, stagnation_variation=0.4, its_stagnation=5, leap_percentage=0.8, seed=115)
+    print(fit)
+    print(pt)
+    if problem_to_solve == "partition sum":
+        partition_problem.print_difference_subsets(pt)
+    if problem_to_solve == "subset sum":
+        subset_problem.print_difference_subsets(pt)
+
+if "Greedy" in to_use:
+    print("create Greedy")
+    if problem_to_solve == "partition sum":
+        mh = GreedyMH_Real(partition_problem.min_x, partition_problem.max_x, partition_problem.ndim, False, partition_problem.objective_function, partition_problem.repair_function, partition_problem.preprocess_function)
+    if problem_to_solve == "subset sum":
+        mh = GreedyMH_Real(subset_problem.min_x, subset_problem.max_x, subset_problem.ndim, False, subset_problem.objective_function, subset_problem.repair_function, subset_problem.preprocess_function)
+    print("to run greedy")
+    fit, pt = mh.run(verbose=to_verbose, iterations=100, population=30, seed=115)
+    print(fit)
+    print(pt)
+    if problem_to_solve == "partition sum":
+        partition_problem.print_difference_subsets(pt)
+    if problem_to_solve == "subset sum":
+        subset_problem.print_difference_subsets(pt)
+
+if "PSO" in to_use:
+    print("create PSO")
+    if problem_to_solve == "partition sum":
+        mh = PSOMH_Real(partition_problem.min_x, partition_problem.max_x, partition_problem.ndim, False, partition_problem.objective_function, partition_problem.repair_function, partition_problem.preprocess_function)
+    if problem_to_solve == "subset sum":
+        mh = PSOMH_Real(subset_problem.min_x, subset_problem.max_x, subset_problem.ndim, False, subset_problem.objective_function, subset_problem.repair_function, subset_problem.preprocess_function)
+    print("to run PSO")
+    fit, pt = mh.run(verbose=to_verbose, iterations=100, population=30, omega=0.8, phi_g=1, phi_p=0.5,seed=115)
+    print(fit)
+    print(pt)
+    if problem_to_solve == "partition sum":
+        partition_problem.print_difference_subsets(pt)
+    if problem_to_solve == "subset sum":
+        subset_problem.print_difference_subsets(pt)
+
+if "PSOWL" in to_use:
+    print("create PSOWL")
+    if problem_to_solve == "partition sum":
+        mh = PSOMH_Real_WithLeap(partition_problem.min_x, partition_problem.max_x, partition_problem.ndim, False, partition_problem.objective_function, partition_problem.repair_function, partition_problem.preprocess_function)
+    if problem_to_solve == "subset sum":
+        mh = PSOMH_Real_WithLeap(subset_problem.min_x, subset_problem.max_x, subset_problem.ndim, False, subset_problem.objective_function, subset_problem.repair_function, subset_problem.preprocess_function)
+    print("to run PSO")
+    fit, pt = mh.run(verbose=to_verbose, iterations=100, population=30, omega=0.8, phi_g=1, phi_p=0.5 ,seed=115, stagnation_variation=0.4, its_stagnation=5, leap_percentage=0.8)
+    print(fit)
+    print(pt)
+    if problem_to_solve == "partition sum":
+        partition_problem.print_difference_subsets(pt)
+    if problem_to_solve == "subset sum":
+        subset_problem.print_difference_subsets(pt)
+    
