@@ -1,3 +1,11 @@
+mh_graphs/*
+
+**/Thumbs.db
+**/thumbs.db
+
+#temporal ignore
+webmlexp/*
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
