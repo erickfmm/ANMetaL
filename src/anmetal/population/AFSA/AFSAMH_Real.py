@@ -1,7 +1,6 @@
-#import with_nolib.optimization.population.utils as utils
-import utils.points_utils as utils
-from population.IMetaheuristic import IMetaheuristic
-from population.ISolution import SolutionWithId
+import anmetal.utils.points_utils as utils
+from anmetal.population.IMetaheuristic import IMetaheuristic
+from anmetal.population.ISolution import SolutionWithId
 import numpy as np
 from numpy.random import RandomState
 from typing import List, Callable

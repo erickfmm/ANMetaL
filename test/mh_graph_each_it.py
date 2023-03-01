@@ -1,24 +1,18 @@
-import os
-import sys
-from os.path import dirname, join, abspath, exists
-sys.path.append(abspath(join(dirname(__file__), '..')))
-######################################################
-
-#python test\mh_graph_each_it.py --mh afsa --problem Goldsteinprice --verbose 1 --seed 0
-
-from population.AFSA.AFSAMH_Real import AFSAMH_Real
-from population.SillyRandom.GreedyMH_Real import GreedyMH_Real
-from population.SillyRandom.GreedyMH_Real_WithLeap import GreedyMH_Real_WithLeap
-from population.PSO.PSOMH_Real import PSOMH_Real
-from population.PSO.PSOMH_Real_WithLeap import PSOMH_Real_WithLeap
+from anmetal.population.AFSA.AFSAMH_Real import AFSAMH_Real
+from anmetal.population.SillyRandom.GreedyMH_Real import GreedyMH_Real
+from anmetal.population.SillyRandom.GreedyMH_Real_WithLeap import GreedyMH_Real_WithLeap
+from anmetal.population.PSO.PSOMH_Real import PSOMH_Real
+from anmetal.population.PSO.PSOMH_Real_WithLeap import PSOMH_Real_WithLeap
 
 
 #from problems.nphard_real.partition__and_subset_sum import Partition_Real, Subset_Real
-import problems.nonlinear_functions.two_inputs as problems_2
+import anmetal.problems.nonlinear_functions.two_inputs as problems_2
 
 import matplotlib.pyplot as plt
 from numpy.random import RandomState
 import numpy as np
+import os
+from os.path import exists, join
 
 import argparse
 import shutil

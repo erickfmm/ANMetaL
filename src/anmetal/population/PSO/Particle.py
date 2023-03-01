@@ -1,4 +1,4 @@
-from population.ISolution import SolutionWithId
+from anmetal.population.ISolution import SolutionWithId
 
 
 class SolutionParticle(SolutionWithId):

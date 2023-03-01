@@ -1,14 +1,7 @@
-import os
-import sys
-from os.path import dirname, join, abspath
-sys.path.append(abspath(join(dirname(__file__), '..')))
-######################################################
+from anmetal.population.Genetic.GeneticMH_Categorical import GeneticMH_Categorical
+from anmetal.population.Genetic.GeneticMH_Categorical_WithLeap import GeneticMH_Categorical_WithLeap
 
-#import test.categorical_mh_optimization
-from population.Genetic.GeneticMH_Categorical import GeneticMH_Categorical
-from population.Genetic.GeneticMH_Categorical_WithLeap import GeneticMH_Categorical_WithLeap
-
-from problems.nphard_categorical.knapsack import Knapsack_Categorical
+from anmetal.problems.nphard_categorical.knapsack import Knapsack_Categorical
 
 #import numpy as np
 from numpy.random import RandomState

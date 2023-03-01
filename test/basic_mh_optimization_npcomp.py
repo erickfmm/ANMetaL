@@ -1,17 +1,11 @@
-import os
-import sys
-from os.path import dirname, join, abspath
-sys.path.append(abspath(join(dirname(__file__), '..')))
-######################################################
-
-from population.AFSA.AFSAMH_Real import AFSAMH_Real
-from population.SillyRandom.GreedyMH_Real import GreedyMH_Real
-from population.SillyRandom.GreedyMH_Real_WithLeap import GreedyMH_Real_WithLeap
-from population.PSO.PSOMH_Real import PSOMH_Real
-from population.PSO.PSOMH_Real_WithLeap import PSOMH_Real_WithLeap
+from anmetal.population.AFSA.AFSAMH_Real import AFSAMH_Real
+from anmetal.population.SillyRandom.GreedyMH_Real import GreedyMH_Real
+from anmetal.population.SillyRandom.GreedyMH_Real_WithLeap import GreedyMH_Real_WithLeap
+from anmetal.population.PSO.PSOMH_Real import PSOMH_Real
+from anmetal.population.PSO.PSOMH_Real_WithLeap import PSOMH_Real_WithLeap
 
 
-from problems.nphard_real.partition__and_subset_sum import Partition_Real, Subset_Real
+from anmetal.problems.nphard_real.partition__and_subset_sum import Partition_Real, Subset_Real
 
 to_use = [
     "AFSA",

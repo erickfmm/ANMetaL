@@ -1,8 +1,8 @@
-from population.IMetaheuristic import IMetaheuristic
-from population.ISolution import SolutionWithId
+from anmetal.population.IMetaheuristic import IMetaheuristic
+from anmetal.population.ISolution import SolutionWithId
 import numpy as np
 from numpy.random import RandomState
-from typing import List, Callable
+from typing import List, Callable, Tuple
 
 class GeneticMH_Categorical(IMetaheuristic):
     def __init__(self, categorics: list, ndims: int, to_max: bool,
@@ -62,7 +62,7 @@ class GeneticMH_Categorical(IMetaheuristic):
                 for individual in self._group:
                     individual = self.mutate_individual(individual.point)
             iteration += 1
-            # print("seteando historicoooooooooooooooooooooooo")
+            # print("setting historical")
             best_solution_it = self.find_best_solution(self._group)
             best_fitness_it = best_solution_it.fitness
             best_point_it = np.copy(best_solution_it.point)
@@ -121,18 +121,18 @@ class GeneticMH_Categorical(IMetaheuristic):
     def recombination(self, elite: List[SolutionWithId]):
         self.movements["recombination"] += 1
         """
-        tengo una elite, subconjunto del total, y cruzarlos para completar el total
-        sin fidelidad:
-        -creo arreglo de indices [0...len(elite)]
-        -lo shuffle
-        -hago un for desde 0 hasta población
-        -por cada individuo le busco una pareja y creo hijos. 
-        con fidelidad:
-        -creo arreglo de indices [0...len(elite)]
-        -lo shuffle
-        -lo divido en 2 partes iguales
-        -creo parejas para cada uno de ellos, emparejando los indices (tener en cuenta el soltero si hay)
-        -hago un for desde 0 hasta población y creo hijos. usando el mismo orden shuffleado y repitiendo 
+        I have an elite, subset of universe, cross it to complete the new universe
+        without fidelity:
+        - I create an array of indices [0...len(elite)]
+        - I shuffle it (permutation)
+        - I make a for 0 to population
+        - for each individual, i search a couple and i make children
+        with fidelity:
+        - I create an array of indices [0...len(elite)]
+        - I shuffle it (permutation)
+        - I split that array int 2 (male and female, just taking the half)
+        - I make a couple for each of them, coupling the indices (having in account if that individual is single)
+        - I make a for 0 to population and I make children, using the same order in the shuffling and repeating
         """
         newgroup:List[SolutionWithId] = []
         indexes:List[int] = [i for i in range(len(elite))]
@@ -164,7 +164,7 @@ class GeneticMH_Categorical(IMetaheuristic):
         self._group:List[SolutionWithId] = newgroup
 
 
-    def cross_couple(self, individual1: SolutionWithId, individual2: SolutionWithId) -> (list, float):
+    def cross_couple(self, individual1: SolutionWithId, individual2: SolutionWithId) -> Tuple[list, float]:
         self.movements["crossing"] += 1
         individual_point1 = individual1.point
         individual_point2 = individual2.point
@@ -202,7 +202,7 @@ class GeneticMH_Categorical(IMetaheuristic):
                  for i in range(0, self._ndims)]
         return self.repair_or_not(point)
     
-    def repair_or_not(self, point: list) -> (list, float):
+    def repair_or_not(self, point: list) -> Tuple[list, float]:
         fitness = self.objective_function(self.preprocess_function(point))
         if not fitness:
             new_point = self.repair_function(point)

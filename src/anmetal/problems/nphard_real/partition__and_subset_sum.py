@@ -1,4 +1,4 @@
-from problems.IProblem import IProblem
+from anmetal.problems.IProblem import IProblem
 
 import numpy as np
 from numpy.random import RandomState

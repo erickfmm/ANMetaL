@@ -1,10 +1,5 @@
-import os
-import sys
-from os.path import dirname, join, abspath
-sys.path.append(abspath(join(dirname(__file__), '..')))
-######################################################
 import math
-import iterative_methods as it_optimization
+import anmetal.iterative_methods as it_optimization
 
 
 ##example of newton method for 100^100 in video of "derivando" channel

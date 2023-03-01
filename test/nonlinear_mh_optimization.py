@@ -1,12 +1,6 @@
-import os
-import sys
-from os.path import dirname, join, abspath
-sys.path.append(abspath(join(dirname(__file__), '..')))
-######################################################
-
-import problems.nonlinear_functions.n_inputs as problems_n
-import problems.nonlinear_functions.one_input as problems_1
-import problems.nonlinear_functions.two_inputs as problems_2
+import anmetal.problems.nonlinear_functions.n_inputs as problems_n
+import anmetal.problems.nonlinear_functions.one_input as problems_1
+import anmetal.problems.nonlinear_functions.two_inputs as problems_2
 
 import numpy as np
 
@@ -63,11 +57,11 @@ if False:
     r2 = eval_random(cls_2s, 2)
 
 
-from population.AFSA.AFSAMH_Real import AFSAMH_Real
-from population.SillyRandom.GreedyMH_Real import GreedyMH_Real
-from population.SillyRandom.GreedyMH_Real_WithLeap import GreedyMH_Real_WithLeap
-from population.PSO.PSOMH_Real import PSOMH_Real
-from population.PSO.PSOMH_Real_WithLeap import PSOMH_Real_WithLeap
+from anmetal.population.AFSA.AFSAMH_Real import AFSAMH_Real
+from anmetal.population.SillyRandom.GreedyMH_Real import GreedyMH_Real
+from anmetal.population.SillyRandom.GreedyMH_Real_WithLeap import GreedyMH_Real_WithLeap
+from anmetal.population.PSO.PSOMH_Real import PSOMH_Real
+from anmetal.population.PSO.PSOMH_Real_WithLeap import PSOMH_Real_WithLeap
 
 def eval_mh(cls_list, n, mh_to_use, verbose=False):
     rs = {}
@@ -108,12 +102,12 @@ def eval_mh(cls_list, n, mh_to_use, verbose=False):
 
 if True:
     print("#"*80)
-    print("ns with 20 length vector")
-    mh_to_use = "AFSA"
+    print("ns with 30 length vector")
+    mh_to_use = "AFSA"  # can be AFSA, Greedy, GreedyWL, PSO, PSOWL
     mh_rn = eval_mh(cls_ns, 30, mh_to_use)
     print("#"*80)
-    print("1s")
+    print("1s")  # problems with 1D vector
     mh_r1 = eval_mh(cls_1s, 1, mh_to_use)
     print("#"*80)
-    print("2s")
+    print("2s")  # problems with 2D vector
     mh_r2 = eval_mh(cls_2s, 2, mh_to_use)
