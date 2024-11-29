@@ -1,3 +1,5 @@
+#This file test the Real version of the Metaheuristics (Numerical) with the problems in anmetal.problems.nphard_real package that works on 2D vector points, creaing a figure in each iteration with the position of each point and the position of the just past iteration with a line between them for each point. to view the evolution and movement of the solution candidates (points) in the search space
+
 from anmetal.population.AFSA.AFSAMH_Real import AFSAMH_Real
 from anmetal.population.SillyRandom.GreedyMH_Real import GreedyMH_Real
 from anmetal.population.SillyRandom.GreedyMH_Real_WithLeap import GreedyMH_Real_WithLeap

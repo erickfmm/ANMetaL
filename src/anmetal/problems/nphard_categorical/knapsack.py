@@ -1,3 +1,4 @@
+#This file implements the kanapsack problem
 from anmetal.problems.IProblem import IProblem
 
 from numpy.random import RandomState

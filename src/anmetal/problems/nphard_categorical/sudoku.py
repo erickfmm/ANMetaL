@@ -1,6 +1,7 @@
+#This file implements the sudoku solving problem
 import numpy as np
-
-class Sudoku:
+from anmetal.problems.IProblem import IProblem
+class Sudoku(IProblem):
     def __init__(self, initial_state: list=None):
         self.state = initial_state
         if self.state is None:

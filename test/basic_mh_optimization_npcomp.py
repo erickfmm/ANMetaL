@@ -1,3 +1,4 @@
+#This file test the Real version of the Metaheuristics (Numerical) with the problems in anmetal.problems.nphard_real package
 from anmetal.population.AFSA.AFSAMH_Real import AFSAMH_Real
 from anmetal.population.SillyRandom.GreedyMH_Real import GreedyMH_Real
 from anmetal.population.SillyRandom.GreedyMH_Real_WithLeap import GreedyMH_Real_WithLeap

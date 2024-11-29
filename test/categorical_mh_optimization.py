@@ -1,4 +1,7 @@
+#This file test the genetic algorithm or other metaheuristics that use categorical variables, on knapsack and maybe other categorical problems
+
 from anmetal.population.Genetic.GeneticMH_Categorical import GeneticMH_Categorical
+
 from anmetal.population.Genetic.GeneticMH_Categorical_WithLeap import GeneticMH_Categorical_WithLeap
 
 from anmetal.problems.nphard_categorical.knapsack import Knapsack_Categorical

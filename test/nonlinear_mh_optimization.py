@@ -1,3 +1,4 @@
+#This file test the Real (Numerical) version of the Metaheuristics with the problems in anmetal.problems.nonlinear_functions using random vector data in a non linear distribution
 import anmetal.problems.nonlinear_functions.n_inputs as problems_n
 import anmetal.problems.nonlinear_functions.one_input as problems_1
 import anmetal.problems.nonlinear_functions.two_inputs as problems_2

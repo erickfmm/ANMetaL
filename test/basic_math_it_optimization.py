@@ -1,3 +1,4 @@
+# This file tests the iterative single solution optimization methods
 import math
 import anmetal.iterative_methods as it_optimization
 
