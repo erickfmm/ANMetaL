@@ -2,9 +2,13 @@ import random
 import numpy as np
 from ..IMetaheuristic import IMetaheuristic
 from ..ISolution import SolutionBasic
+from typing import List, Callable
 
 class ArtificialBeeColony(IMetaheuristic):
-    def __init__(self, to_max=True, colony_size=40, limit=20):
+    def __init__(self, min_value: float, max_value: float, ndims: int, to_max: bool,
+     objective_function: Callable[[List[float]], float],
+      repair_function: Callable[[List[float]], List[float]],
+      preprocess_function: Callable[[List[float]], List[float]] = None):
         """
         Initialize Artificial Bee Colony Algorithm
         
@@ -13,9 +17,17 @@ class ArtificialBeeColony(IMetaheuristic):
             colony_size: Size of the colony (number of employed bees = number of onlooker bees)
             limit: Maximum number of trials before abandoning a food source
         """
-        super().__init__(to_max)
-        self._colony_size = colony_size  # number of employed bees = number of food sources
-        self._limit = limit  # limit of trials for abandonment
+        self._min = min_value
+        self._max = max_value
+        self._ndims = ndims
+        self._to_max = to_max
+
+        self.objective_function = objective_function
+        self.preprocess_function = \
+         preprocess_function if preprocess_function is not None else lambda p: p
+        self.repair_function = \
+         repair_function if repair_function is not None else lambda p: p
+
         self._food_sources = []  # food sources / solutions
         self._trials = []  # trial counter for each food source
         self._best_solution = None
@@ -126,8 +138,12 @@ class ArtificialBeeColony(IMetaheuristic):
                     self._food_sources[i] = SolutionBasic(point, fitness)
                     self._trials[i] = 0
     
-    def run(self):
+    def run(self, colony_size=40, limit=20):
         """Execute the Artificial Bee Colony algorithm"""
+        
+        self._colony_size = colony_size  # number of employed bees = number of food sources
+        self._limit = limit  # limit of trials for abandonment
+
         self.initialize_population()
         
         for _ in range(self._iterations):

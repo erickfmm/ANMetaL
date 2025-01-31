@@ -66,18 +66,18 @@ prob = probs_dict[args.problem] if args.problem in probs_dict else problems_2.Ca
 
 if str.lower(args.mh) == "afsa" or args.mh == "":
     mh = AFSAMH_Real(prob.get_limits()[0], prob.get_limits()[1], 2, False, prob.func, None, None)
-    gen = mh.run_yielded(verbose=to_verbose, iterations=iterations, population=population, visual_distance_percentage=0.5, velocity_percentage=0.5, n_points_to_choose=3, crowded_percentage=0.7, its_stagnation=4, leap_percentage=0.3, stagnation_variation=0.4, seed=seed)
+    gen = mh.run_yielded(verbose=to_verbose, iterations=iterations, population=population, visual_distance_percentage=0.2, velocity_percentage=0.3, n_points_to_choose=5, crowded_percentage=0.8, its_stagnation=7, leap_percentage=0.2, stagnation_variation=0.4, seed=seed)
 elif str.lower(args.mh) == "pso":
     mh = PSOMH_Real(prob.get_limits()[0], prob.get_limits()[1], 2, False, prob.func, None, None)
-    gen = mh.run_yielded(verbose=to_verbose, iterations=iterations, population=population, omega=0.8, phi_g=1, phi_p=0.5)
+    gen = mh.run_yielded(verbose=to_verbose, iterations=iterations, population=population, omega=0.5, phi_g=1, phi_p=2)
 elif str.lower(args.mh) == "psowl":
     mh = PSOMH_Real_WithLeap(prob.get_limits()[0], prob.get_limits()[1], 2, False, prob.func, None, None)
-    gen = mh.run_yielded(verbose=to_verbose, iterations=iterations, population=population, omega=0.8, phi_g=1, phi_p=0.5)
+    gen = mh.run_yielded(verbose=to_verbose, iterations=iterations, population=population, omega=0.5, phi_g=1, phi_p=2, stagnation_variation=0.4, its_stagnation=5, leap_percentage=0.8)
 elif str.lower(args.mh) == "greed":
     mh = GreedyMH_Real(prob.get_limits()[0], prob.get_limits()[1], 2, False, prob.func, None, None)
-    gen = mh.run_yielded(verbose=to_verbose, iterations=iterations, population=population, stagnation_variation=0.4, its_stagnation=5, leap_percentage=0.8)
+    gen = mh.run_yielded(verbose=to_verbose, iterations=iterations, population=population)
 elif str.lower(args.mh) == "greedwl":
-    mh = GreedyMH_Real(prob.get_limits()[0], prob.get_limits()[1], 2, False, prob.func, None, None)
+    mh = GreedyMH_Real_WithLeap(prob.get_limits()[0], prob.get_limits()[1], 2, False, prob.func, None, None)
     gen = mh.run_yielded(verbose=to_verbose, iterations=iterations, population=population, stagnation_variation=0.4, its_stagnation=5, leap_percentage=0.8)
 
 folderpath = join("mh_graphs", args.mh+"_"+args.problem)

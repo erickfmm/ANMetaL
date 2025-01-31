@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "anmetal"
-version = "0.0.3"
+version = "0.1.1"
 authors = [
     { name="Erick Merino", email="erickfmm@gmail.com" },
 ]
@@ -14,7 +14,7 @@ maintainers = [
 description = "Another Numeric optimization and Metaheuristics Library"
 readme = "README.md"
 license = { file="LICENSE" }
-requires-python = ">=3.9"
+requires-python = ">=3.7"
 keywords = [
   "metaheuristic", "optimization"
 ]

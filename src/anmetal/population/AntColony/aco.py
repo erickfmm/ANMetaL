@@ -4,7 +4,7 @@ from ..IMetaheuristic import IMetaheuristic
 from ..ISolution import SolutionBasic
 
 class AntColony(IMetaheuristic):
-    def __init__(self, to_max=True, n_ants=30, evaporation_rate=0.1, alpha=1.0, beta=2.0):
+    def __init__(self, to_max=True, n_ants=30):
         """
         Initialize Ant Colony Optimization
         
@@ -89,7 +89,7 @@ class AntColony(IMetaheuristic):
             idx = self._discretize_position(self._best_solution.point[dim], dim)
             self._pheromone[dim][idx] += best_deposit
     
-    def run(self):
+    def run(self, evaporation_rate=0.1, alpha=1.0, beta=2.0, iterations=100, n_ants=30, verbose=False):
         """Execute the Ant Colony Optimization algorithm"""
         self.initialize_population()
         

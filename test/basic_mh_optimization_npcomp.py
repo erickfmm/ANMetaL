@@ -4,14 +4,13 @@ from anmetal.population.SillyRandom.GreedyMH_Real import GreedyMH_Real
 from anmetal.population.SillyRandom.GreedyMH_Real_WithLeap import GreedyMH_Real_WithLeap
 from anmetal.population.PSO.PSOMH_Real import PSOMH_Real
 from anmetal.population.PSO.PSOMH_Real_WithLeap import PSOMH_Real_WithLeap
-from anmetal.population.ABC.ABCMH_Real import ABCMH_Real
-from anmetal.population.AntColony.ACOMH_Real import ACOMH_Real
-from anmetal.population.Bat.BatMH_Real import BatMH_Real
-from anmetal.population.Blackhole.BlackholeMH_Real import BlackholeMH_Real
-from anmetal.population.Cuckoo.CuckooMH_Real import CuckooMH_Real
-from anmetal.population.Firefly.FireflyMH_Real import FireflyMH_Real
-from anmetal.population.Genetic.GeneticMH_Real import GeneticMH_Real
-from anmetal.population.HarmonySearch.HSMH_Real import HSMH_Real
+from anmetal.population.ABC.abc import ArtificialBeeColony as ABCMH_Real
+from anmetal.population.AntColony.aco import AntColony as ACOMH_Real
+from anmetal.population.Bat.bat import BatAlgorithm as BatMH_Real
+from anmetal.population.Blackhole.blackhole import BlackHole as BlackholeMH_Real
+from anmetal.population.Cuckoo.cuckoo import CuckooSearch as CuckooMH_Real
+from anmetal.population.Firefly.firefly import FireflyAlgorithm as FireflyMH_Real
+from anmetal.population.HarmonySearch.harmony import HarmonySearch as HSMH_Real
 
 from anmetal.problems.nphard_real.partition__and_subset_sum import Partition_Real, Subset_Real
 
@@ -27,7 +26,6 @@ to_use = [
     "BH",
     "CUCKOO",
     "FIREFLY",
-    "GA",
     "HS"
     ]
 
@@ -198,21 +196,6 @@ if "FIREFLY" in to_use:
         mh = FireflyMH_Real(subset_problem.min_x, subset_problem.max_x, subset_problem.ndim, False, subset_problem.objective_function, subset_problem.repair_function, subset_problem.preprocess_function)
     print("to run Firefly")
     fit, pt = mh.run(verbose=to_verbose, iterations=100, population=30, alpha=0.5, beta0=1.0, gamma=1.0, seed=115)
-    print(fit)
-    print(pt)
-    if problem_to_solve == "partition sum":
-        partition_problem.print_difference_subsets(pt)
-    if problem_to_solve == "subset sum":
-        subset_problem.print_difference_subsets(pt)
-
-if "GA" in to_use:
-    print("create Genetic Algorithm")
-    if problem_to_solve == "partition sum":
-        mh = GeneticMH_Real(partition_problem.min_x, partition_problem.max_x, partition_problem.ndim, False, partition_problem.objective_function, partition_problem.repair_function, partition_problem.preprocess_function)
-    if problem_to_solve == "subset sum":
-        mh = GeneticMH_Real(subset_problem.min_x, subset_problem.max_x, subset_problem.ndim, False, subset_problem.objective_function, subset_problem.repair_function, subset_problem.preprocess_function)
-    print("to run Genetic Algorithm")
-    fit, pt = mh.run(verbose=to_verbose, iterations=100, population=30, mutation_rate=0.1, crossover_rate=0.8, seed=115)
     print(fit)
     print(pt)
     if problem_to_solve == "partition sum":
