@@ -30,6 +30,15 @@ dependencies = [
 [project.optional-dependencies]
 test = [
   "matplotlib",
+  "seaborn",
+  "pandas"
+]
+
+[dependency-groups]
+dev = [
+  "matplotlib",
+  "seaborn",
+  "pandas"
 ]
 
 [project.urls]
