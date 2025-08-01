@@ -38,7 +38,8 @@ test = [
 dev = [
   "matplotlib",
   "seaborn",
-  "pandas"
+  "pandas",
+  "opencv-python",
 ]
 
 [project.urls]
