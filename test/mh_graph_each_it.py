@@ -59,7 +59,8 @@ parser.add_argument("--problem", default="Goldsteinprice", type=str, help="\
 parser.add_argument("--verbose", default=1, type=int, help="1 if print logs, 0 if not print")
 parser.add_argument("--iterations", default=100, type=int, help="Number of iterations in Metaheuristic")
 parser.add_argument("--population", default=30, type=int, help="Number of solutions in Metaheuristic")
-parser.add_argument("--plot3d", default=0, type=int, help="1 for 3D plot with fitness as Z-axis, 0 for 2D plot")
+parser.add_argument("--plottype", default="2d", choices=["2d", "3d"], help="Plot type: 2d or 3d")
+parser.add_argument("--traces", default="none", choices=["all", "none", "smooth"], help="Keep traces: all, none, or smooth")
 parser.add_argument("--fps", default=10, type=int, help="Frames per second for the output video")
 
 args = parser.parse_args()
@@ -67,7 +68,8 @@ args = parser.parse_args()
 print("args: ", args)
 
 to_verbose : bool = True if args.verbose == 1 else False
-plot_3d : bool = True if args.plot3d == 1 else False
+plot_3d : bool = True if args.plottype == "3d" else False
+traces_mode = args.traces
 seed: int = args.seed
 random_generator = RandomState(seed)
 iterations = args.iterations
@@ -219,7 +221,7 @@ else:
     fig = plt.figure(figsize=(10, 8))
     ax = fig.add_subplot(111)
 
-for step_data in history:
+for frame_idx, step_data in enumerate(history):
     iteration = step_data['iteration']
     ps_ = step_data['points']
     fts = step_data['fitness']
@@ -252,38 +254,45 @@ for step_data in history:
                     random_generator.uniform(0.3, 1),
                     random_generator.uniform(0.3, 1))
             colors_to_use.append(color)
-            
-            if plot_3d:
-                fitness = fts[i]
-                ax.scatter(ps_[i][0], ps_[i][1], fitness, c=[color], s=60, marker='*')
-            else:
-                ax.plot(ps_[i][0], ps_[i][1], '*', color=color, markersize=8)
-                
-        last_points = np.copy(ps_)
-        last_fitness = np.copy(fts)
         is_first = False
-    else:
-        # Draw lines and points for movement visualization
-        for i in range(len(ps_)):
-            current_fitness = fts[i]
-            
-            if plot_3d:
-                # Draw line from previous to current position
-                ax.plot([last_points[i][0], ps_[i][0]], 
-                       [last_points[i][1], ps_[i][1]], 
-                       [last_fitness[i], current_fitness], 
-                       '-', color=colors_to_use[i], alpha=0.7)
-                # Draw current point
-                ax.scatter(ps_[i][0], ps_[i][1], current_fitness, c=[colors_to_use[i]], s=60, marker='*')
-            else:
-                # Draw line from previous to current position
-                ax.plot([last_points[i][0], ps_[i][0]], [last_points[i][1], ps_[i][1]], 
-                       '-', color=colors_to_use[i], alpha=0.7)
-                # Draw current point
-                ax.plot(ps_[i][0], ps_[i][1], '*', color=colors_to_use[i], markersize=8)
+
+    # Draw points and traces
+    for i in range(len(ps_)):
+        color = colors_to_use[i]
         
-        last_points = np.copy(ps_)
-        last_fitness = np.copy(fts)
+        # Draw Traces/Lines
+        if traces_mode == "none":
+            # Draw line from previous to current position (if not first frame)
+            if frame_idx > 0:
+                prev_ps = history[frame_idx-1]['points'][i]
+                prev_ft = history[frame_idx-1]['fitness'][i]
+                
+                if plot_3d:
+                    ax.plot([prev_ps[0], ps_[i][0]], 
+                           [prev_ps[1], ps_[i][1]], 
+                           [prev_ft, fts[i]], 
+                           '-', color=color, alpha=0.7)
+                else:
+                    ax.plot([prev_ps[0], ps_[i][0]], [prev_ps[1], ps_[i][1]], 
+                           '-', color=color, alpha=0.7)
+        else: # all or smooth
+            # Get full path
+            path_points = np.array([h['points'][i] for h in history[:frame_idx+1]])
+            path_fitness = np.array([h['fitness'][i] for h in history[:frame_idx+1]])
+            
+            alpha_val = 0.4 if traces_mode == "smooth" else 0.7
+            
+            if len(path_points) > 1:
+                if plot_3d:
+                    ax.plot(path_points[:, 0], path_points[:, 1], path_fitness, '-', color=color, alpha=alpha_val)
+                else:
+                    ax.plot(path_points[:, 0], path_points[:, 1], '-', color=color, alpha=alpha_val)
+
+        # Draw current point
+        if plot_3d:
+            ax.scatter(ps_[i][0], ps_[i][1], fts[i], c=[color], s=60, marker='*')
+        else:
+            ax.plot(ps_[i][0], ps_[i][1], '*', color=color, markersize=8)
     
     # Save the plot
     plt.tight_layout()
@@ -299,6 +308,7 @@ print(f"Video saved as: {video_path}")
 
 # Usage examples:
 # 2D plotting: python mh_graph_each_it.py --mh ABC --problem Camelback --iterations 20 --population 30
-# 3D plotting: python mh_graph_each_it.py --mh Firefly --problem Goldsteinprice --iterations 15 --plot3d 1 --fps 30
+# 3D plotting: python mh_graph_each_it.py --mh Firefly --problem Goldsteinprice --iterations 15 --plottype 3d --fps 30
+# With traces: python mh_graph_each_it.py --mh PSO --problem Quartic --traces all
 # Available algorithms: AFSA, PSO, PSOWL, Greed, GreedWL, ABC, ACO, Bat, Blackhole, Cuckoo, Firefly, Harmony
 # Available problems: Camelback, Goldsteinprice, Pshubert1, Pshubert2, Shubert, Quartic
