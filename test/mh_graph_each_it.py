@@ -175,6 +175,42 @@ print("to start iterations")
 colors_to_use = []
 is_first : bool = True
 
+# Collect all iterations first to determine global limits for 3D plot
+history = []
+all_fitness_values = []
+
+print("Running optimization to collect data...")
+for iteration, best_fitness_historical, best_bin_point, points_a, fts in gen:
+    print(f"Processing iteration {iteration}...", end='\r')
+    # Store copy of points
+    current_points = np.copy(points_a)
+    
+    # Calculate fitness if not provided
+    if fts is None:
+        current_fitness = np.array([prob.func(p) for p in current_points])
+    else:
+        current_fitness = np.copy(fts)
+        
+    history.append({
+        'iteration': iteration,
+        'points': current_points,
+        'fitness': current_fitness
+    })
+    if plot_3d:
+        all_fitness_values.extend(current_fitness)
+print("\nOptimization finished. Generating frames...")
+
+# Determine Z-axis limits for 3D plot
+z_min, z_max = None, None
+if plot_3d and all_fitness_values:
+    min_fit = min(all_fitness_values)
+    max_fit = max(all_fitness_values)
+    # Add some padding (5%)
+    z_range = max_fit - min_fit
+    if z_range == 0: z_range = 1.0
+    z_min = min_fit - 0.05 * z_range
+    z_max = max_fit + 0.05 * z_range
+
 # Configure plot for 2D or 3D
 if plot_3d:
     fig = plt.figure(figsize=(12, 8))
@@ -182,8 +218,13 @@ if plot_3d:
 else:
     fig = plt.figure(figsize=(10, 8))
     ax = fig.add_subplot(111)
-for iteration, best_fitness_historical, best_bin_point, points_a, fts in gen:
-    print("iteration: ", iteration)
+
+for step_data in history:
+    iteration = step_data['iteration']
+    ps_ = step_data['points']
+    fts = step_data['fitness']
+    
+    print(f"Generating frame for iteration {iteration}...", end='\r')
     
     # Clear previous plot
     ax.clear()
@@ -192,6 +233,8 @@ for iteration, best_fitness_historical, best_bin_point, points_a, fts in gen:
     if plot_3d:
         ax.set_xlim(x_limits[0], x_limits[1])
         ax.set_ylim(y_limits[0], y_limits[1])
+        if z_min is not None and z_max is not None:
+            ax.set_zlim(z_min, z_max)
         ax.set_xlabel('X')
         ax.set_ylabel('Y')
         ax.set_zlabel('Fitness')
@@ -203,8 +246,6 @@ for iteration, best_fitness_historical, best_bin_point, points_a, fts in gen:
         ax.set_ylabel('Y')
         ax.set_title(f'{args.mh.upper()} - {args.problem} - Iteration {iteration}')
     
-    ps_ = np.copy(points_a)
-    
     if is_first: # Generate colors for each point
         for i in range(len(ps_)):
             color = (random_generator.uniform(0.3, 1),
@@ -213,18 +254,18 @@ for iteration, best_fitness_historical, best_bin_point, points_a, fts in gen:
             colors_to_use.append(color)
             
             if plot_3d:
-                fitness = fts[i] if fts is not None else prob.func(ps_[i])
+                fitness = fts[i]
                 ax.scatter(ps_[i][0], ps_[i][1], fitness, c=[color], s=60, marker='*')
             else:
                 ax.plot(ps_[i][0], ps_[i][1], '*', color=color, markersize=8)
                 
         last_points = np.copy(ps_)
-        last_fitness = np.copy(fts) if fts is not None else [prob.func(p) for p in ps_]
+        last_fitness = np.copy(fts)
         is_first = False
     else:
         # Draw lines and points for movement visualization
         for i in range(len(ps_)):
-            current_fitness = fts[i] if fts is not None else prob.func(ps_[i])
+            current_fitness = fts[i]
             
             if plot_3d:
                 # Draw line from previous to current position
@@ -242,11 +283,12 @@ for iteration, best_fitness_historical, best_bin_point, points_a, fts in gen:
                 ax.plot(ps_[i][0], ps_[i][1], '*', color=colors_to_use[i], markersize=8)
         
         last_points = np.copy(ps_)
-        last_fitness = [fts[i] if fts is not None else prob.func(ps_[i]) for i in range(len(ps_))]
+        last_fitness = np.copy(fts)
     
     # Save the plot
     plt.tight_layout()
     plt.savefig(join(folderpath, f"mhgraph_{iteration:04d}.png"), dpi=150, bbox_inches='tight')
+print("\nFrames generated.")
 
 # Create video from images
 video_path = join(folderpath, f"{args.mh}_{args.problem}_animation.mp4")
