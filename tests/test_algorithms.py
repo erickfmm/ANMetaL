@@ -1,8 +1,8 @@
 """Tests for optimization algorithms."""
 import pytest
 import numpy as np
-from anmetal.population.AFSA.AFSAMH_Real import AFSAMH_Real
-from anmetal.population.PSO.PSOMH_Real import PSOMH_Real
+from anmetal.optimizer.population.AFSA.AFSAMH_Real import AFSAMH_Real
+from anmetal.optimizer.population.PSO.PSOMH_Real import PSOMH_Real
 from anmetal.problems.nonlinear_functions.two_inputs import Goldsteinprice
 
 class TestAFSA:
