@@ -14,7 +14,7 @@ class TestKnapsack:
             max_value=5,
             max_cost=6
         )
-        assert knapsack.capacity == 50.8
+        assert knapsack.knapsack_capacity == 50.8
         assert knapsack.total_posible_elements == 50
 
     def test_knapsack_objective_function(self):
@@ -26,7 +26,7 @@ class TestKnapsack:
             max_value=5,
             max_cost=6
         )
-        solution = [1, 0, 1, 0, 1]  # Example solution
+        solution = ["is", "not", "is", "not", "is"]  # Example solution
         value = knapsack.objective_function(solution)
         assert isinstance(value, (int, float))
         assert value >= 0

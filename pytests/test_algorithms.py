@@ -10,25 +10,25 @@ class TestAFSA:
         """Test AFSA algorithm initialization."""
         problem = Goldsteinprice()
         afsa = AFSAMH_Real(
-            min_x=problem.get_limits()[0],
-            max_x=problem.get_limits()[1],
-            dimension=2,
-            to_maximize=False,
+            min_value=problem.get_limits()[0],
+            max_value=problem.get_limits()[1],
+            ndims=2,
+            to_max=False,
             objective_function=problem.func,
             repair_function=None,
             preprocess_function=None
         )
-        assert afsa.dimension == 2
-        assert not afsa.to_maximize
+        assert afsa._ndims == 2
+        assert not afsa._to_max
 
     def test_afsa_run(self):
         """Test AFSA algorithm execution."""
         problem = Goldsteinprice()
         afsa = AFSAMH_Real(
-            min_x=problem.get_limits()[0],
-            max_x=problem.get_limits()[1],
-            dimension=2,
-            to_maximize=False,
+            min_value=problem.get_limits()[0],
+            max_value=problem.get_limits()[1],
+            ndims=2,
+            to_max=False,
             objective_function=problem.func,
             repair_function=None,
             preprocess_function=None
@@ -49,25 +49,25 @@ class TestPSO:
         """Test PSO algorithm initialization."""
         problem = Goldsteinprice()
         pso = PSOMH_Real(
-            min_x=problem.get_limits()[0],
-            max_x=problem.get_limits()[1],
-            dimension=2,
-            to_maximize=False,
+            min_value=problem.get_limits()[0],
+            max_value=problem.get_limits()[1],
+            ndims=2,
+            to_max=False,
             objective_function=problem.func,
             repair_function=None,
             preprocess_function=None
         )
-        assert pso.dimension == 2
-        assert not pso.to_maximize
+        assert pso._ndims == 2
+        assert not pso._to_max
 
     def test_pso_run(self):
         """Test PSO algorithm execution."""
         problem = Goldsteinprice()
         pso = PSOMH_Real(
-            min_x=problem.get_limits()[0],
-            max_x=problem.get_limits()[1],
-            dimension=2,
-            to_maximize=False,
+            min_value=problem.get_limits()[0],
+            max_value=problem.get_limits()[1],
+            ndims=2,
+            to_max=False,
             objective_function=problem.func,
             repair_function=None,
             preprocess_function=None
