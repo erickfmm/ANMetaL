@@ -3,7 +3,7 @@ import importlib
 import os
 
 def main():
-    if len(sys.argv) < 2:
+    if len(sys.argv) < 2 or (len(sys.argv) > 1 and sys.argv[1] in ['help', '--help', '-h']):
         print("Uso: anmetal <comando> [args]")
         print("Comandos disponibles:")
         # Listar archivos .py en la carpeta commands
@@ -12,7 +12,7 @@ def main():
             for f in os.listdir(commands_dir):
                 if f.endswith('.py') and not f.startswith('__'):
                     print(f"  - {f[:-3]}")
-        sys.exit(1)
+        sys.exit(0)
 
     command_name = sys.argv[1]
     args = sys.argv[2:]

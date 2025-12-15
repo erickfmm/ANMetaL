@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "anmetal"
-version = "0.2.0"
+version = "1.0.0"
 authors = [
     { name="Erick Merino", email="erickfmm@gmail.com" },
 ]
@@ -14,7 +14,7 @@ maintainers = [
 description = "Another Numeric optimization and Metaheuristics Library"
 readme = "README.md"
 license = { file="LICENSE" }
-requires-python = ">=3.7"
+requires-python = ">=3.9"
 keywords = [
   "metaheuristic", "optimization"
 ]
@@ -24,7 +24,11 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-  "numpy",
+  "numpy>=1.21.0",
+  "matplotlib>=3.5.0",
+  "seaborn>=0.12.0",
+  "pandas>=1.3.0",
+  "opencv-python>=4.5.0",
 ]
 
 [project.optional-dependencies]
@@ -32,14 +36,6 @@ test = [
   "matplotlib",
   "seaborn",
   "pandas"
-]
-
-[dependency-groups]
-dev = [
-  "matplotlib",
-  "seaborn",
-  "pandas",
-  "opencv-python",
 ]
 
 [project.urls]

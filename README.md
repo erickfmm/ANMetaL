@@ -13,7 +13,7 @@ ANMetaL now includes powerful visualization capabilities that create animated vi
 
 **Quick Start Visualization:**
 ```bash
-python test/mh_graph_each_it.py --mh Firefly --problem Goldsteinprice --iterations 20 --plot3d 1 --fps 30
+anmetal mh_graph_each_it --mh Firefly --problem Goldsteinprice --iterations 20 --plot3d 1 --fps 30
 ```
 
 ## Installation
@@ -37,7 +37,7 @@ pip install -e .[dev]
 - `opencv-python` (video generation)
 - `numpy` (numerical operations)
 
-See `/test` folder for examples of use.
+See `/pytests` folder for examples of use.
 
 ## Content
 
@@ -111,7 +111,7 @@ Iterative optimization functions (one solution)
 
 #### Metaheuristic Visualization and Animation
 
-ANMetaL includes a powerful visualization tool (`test/mh_graph_each_it.py`) that creates animated visualizations of metaheuristic optimization processes:
+ANMetaL includes a powerful visualization tool (`anmetal mh_graph_each_it`) that creates animated visualizations of metaheuristic optimization processes:
 
 **Features:**
 - **2D and 3D Plotting**: Visualize population movement in 2D space or 3D with fitness as Z-axis
@@ -134,13 +134,13 @@ ANMetaL includes a powerful visualization tool (`test/mh_graph_each_it.py`) that
 **Usage Examples:**
 ```bash
 # 2D visualization with ABC algorithm
-python test/mh_graph_each_it.py --mh ABC --problem Camelback --iterations 20 --population 30
+anmetal mh_graph_each_it --mh ABC --problem Camelback --iterations 20 --population 30
 
 # 3D visualization with fitness landscape
-python test/mh_graph_each_it.py --mh Firefly --problem Goldsteinprice --iterations 15 --plot3d 1 --fps 30
+anmetal mh_graph_each_it --mh Firefly --problem Goldsteinprice --iterations 15 --plot3d 1 --fps 30
 
 # Quick test with custom parameters
-python test/mh_graph_each_it.py --mh Bat --problem Shubert --iterations 10 --plot3d 1 --fps 20 --seed 42
+anmetal mh_graph_each_it --mh Bat --problem Shubert --iterations 10 --plot3d 1 --fps 20 --seed 42
 ```
 
 **Available Arguments:**
@@ -178,7 +178,7 @@ The visualization tool creates:
 
 ## Example Usage
 
-See the `/test` folder for complete examples. Here's a quick overview:
+See the `/pytests` folder for complete examples. Here's a quick overview:
 
 ### Basic Optimization
 
@@ -204,7 +204,7 @@ fitness, solution = mh.run(verbose=True, iterations=100, population=30,
 
 ```python
 # Run from command line for visualization
-python test/mh_graph_each_it.py --mh PSO --problem Goldsteinprice --iterations 50 --plot3d 1
+anmetal mh_graph_each_it --mh PSO --problem Goldsteinprice --iterations 50 --plot3d 1
 
 # This creates:
 # - Individual iteration images
