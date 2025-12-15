@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 import pandas as pd
+import argparse
+import os
 
 from anmetal.optimizer.population.AFSA.AFSAMH_Real import AFSAMH_Real
 from anmetal.optimizer.population.Greedy.GreedyMH_Real import GreedyMH_Real
@@ -19,7 +21,139 @@ from anmetal.optimizer.population.Harmony.harmony import HarmonySearch as HSMH_R
 
 from anmetal.problems.nphard_real.partition__and_subset_sum import Partition_Real, Subset_Real
 
-# Configuration
+def parse_arguments():
+    """Parse command-line arguments"""
+    parser = argparse.ArgumentParser(
+        description='Plot trajectories of Real Metaheuristics with NP-Complete problems',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Run PSO and ABC on partition sum problem
+  python trajectory_plot_npcomp.py --algorithms PSO ABC --problem "partition sum" --max-iterations 100
+  
+  # Run AFSA with custom parameters
+  python trajectory_plot_npcomp.py --algorithms AFSA --parameter-afsa-visualdistancepercentage 0.6 --parameter-afsa-leappercentage 0.4
+  
+  # Run multiple algorithms with custom output folder
+  python trajectory_plot_npcomp.py --algorithms PSO ABC ACO --folder ./results --ndims 1000 --seed 42
+        """
+    )
+    
+    # Basic configuration
+    parser.add_argument('--folder', type=str, default='.',
+                        help='Output folder for plots (default: current directory)')
+    parser.add_argument('--algorithms', nargs='+', 
+                        choices=['AFSA', 'Greedy', 'GreedyWL', 'PSO', 'PSOWL', 'ABC', 'ACO', 'BAT', 'BH', 'CUCKOO', 'FIREFLY', 'HS'],
+                        default=['PSO', 'ABC', 'ACO', 'BAT', 'FIREFLY', 'HS'],
+                        help='Algorithms to run (default: PSO ABC ACO BAT FIREFLY HS)')
+    parser.add_argument('--problem', type=str, choices=['partition sum', 'subset sum'],
+                        default='partition sum',
+                        help='Problem to solve (default: partition sum)')
+    parser.add_argument('--verbose', type=int, choices=[0, 1, 2], default=0,
+                        help='Verbose level: 0=quiet, 1=normal, 2=debug (default: 0)')
+    parser.add_argument('--max-iterations', type=int, default=50,
+                        help='Maximum number of iterations (default: 50)')
+    parser.add_argument('--population-size', type=int, default=20,
+                        help='Population size (default: 20)')
+    parser.add_argument('--seed', type=int, default=None,
+                        help='Random seed for algorithms (optional, default: 115)')
+    parser.add_argument('--ndims', type=int, default=500,
+                        help='Number of dimensions for the problem (default: 500)')
+    
+    # Algorithm-specific parameters - AFSA
+    parser.add_argument('--parameter-afsa-visualdistancepercentage', type=float, default=0.5,
+                        help='AFSA: Visual distance percentage (default: 0.5)')
+    parser.add_argument('--parameter-afsa-velocitypercentage', type=float, default=0.5,
+                        help='AFSA: Velocity percentage (default: 0.5)')
+    parser.add_argument('--parameter-afsa-npointstochoose', type=int, default=3,
+                        help='AFSA: Number of points to choose (default: 3)')
+    parser.add_argument('--parameter-afsa-crowdedpercentage', type=float, default=0.7,
+                        help='AFSA: Crowded percentage (default: 0.7)')
+    parser.add_argument('--parameter-afsa-itsstagnation', type=int, default=4,
+                        help='AFSA: Iterations stagnation (default: 4)')
+    parser.add_argument('--parameter-afsa-leappercentage', type=float, default=0.3,
+                        help='AFSA: Leap percentage (default: 0.3)')
+    parser.add_argument('--parameter-afsa-stagnationvariation', type=float, default=0.4,
+                        help='AFSA: Stagnation variation (default: 0.4)')
+    
+    # Algorithm-specific parameters - GreedyWL
+    parser.add_argument('--parameter-greedywl-stagnationvariation', type=float, default=0.4,
+                        help='GreedyWL: Stagnation variation (default: 0.4)')
+    parser.add_argument('--parameter-greedywl-itsstagnation', type=int, default=5,
+                        help='GreedyWL: Iterations stagnation (default: 5)')
+    parser.add_argument('--parameter-greedywl-leappercentage', type=float, default=0.8,
+                        help='GreedyWL: Leap percentage (default: 0.8)')
+    
+    # Algorithm-specific parameters - PSO
+    parser.add_argument('--parameter-pso-omega', type=float, default=0.8,
+                        help='PSO: Omega (inertia weight) (default: 0.8)')
+    parser.add_argument('--parameter-pso-phig', type=float, default=1.0,
+                        help='PSO: Phi_g (global coefficient) (default: 1.0)')
+    parser.add_argument('--parameter-pso-phip', type=float, default=0.5,
+                        help='PSO: Phi_p (personal coefficient) (default: 0.5)')
+    
+    # Algorithm-specific parameters - PSOWL
+    parser.add_argument('--parameter-psowl-omega', type=float, default=0.8,
+                        help='PSOWL: Omega (inertia weight) (default: 0.8)')
+    parser.add_argument('--parameter-psowl-phig', type=float, default=1.0,
+                        help='PSOWL: Phi_g (global coefficient) (default: 1.0)')
+    parser.add_argument('--parameter-psowl-phip', type=float, default=0.5,
+                        help='PSOWL: Phi_p (personal coefficient) (default: 0.5)')
+    parser.add_argument('--parameter-psowl-stagnationvariation', type=float, default=0.4,
+                        help='PSOWL: Stagnation variation (default: 0.4)')
+    parser.add_argument('--parameter-psowl-itsstagnation', type=int, default=5,
+                        help='PSOWL: Iterations stagnation (default: 5)')
+    parser.add_argument('--parameter-psowl-leappercentage', type=float, default=0.8,
+                        help='PSOWL: Leap percentage (default: 0.8)')
+    
+    # Algorithm-specific parameters - ABC
+    parser.add_argument('--parameter-abc-limit', type=int, default=20,
+                        help='ABC: Limit parameter (default: 20)')
+    
+    # Algorithm-specific parameters - ACO
+    parser.add_argument('--parameter-aco-evaporationrate', type=float, default=0.1,
+                        help='ACO: Evaporation rate (default: 0.1)')
+    parser.add_argument('--parameter-aco-alpha', type=float, default=1.0,
+                        help='ACO: Alpha parameter (default: 1.0)')
+    parser.add_argument('--parameter-aco-beta', type=float, default=2.0,
+                        help='ACO: Beta parameter (default: 2.0)')
+    
+    # Algorithm-specific parameters - BAT
+    parser.add_argument('--parameter-bat-fmin', type=float, default=0.0,
+                        help='BAT: Minimum frequency (default: 0.0)')
+    parser.add_argument('--parameter-bat-fmax', type=float, default=2.0,
+                        help='BAT: Maximum frequency (default: 2.0)')
+    parser.add_argument('--parameter-bat-a', type=float, default=0.9,
+                        help='BAT: Loudness (default: 0.9)')
+    parser.add_argument('--parameter-bat-r0', type=float, default=0.9,
+                        help='BAT: Pulse rate (default: 0.9)')
+    
+    # Algorithm-specific parameters - CUCKOO
+    parser.add_argument('--parameter-cuckoo-pa', type=float, default=0.25,
+                        help='CUCKOO: Probability of abandonment (default: 0.25)')
+    
+    # Algorithm-specific parameters - FIREFLY
+    parser.add_argument('--parameter-firefly-alpha', type=float, default=0.5,
+                        help='FIREFLY: Alpha (randomness) (default: 0.5)')
+    parser.add_argument('--parameter-firefly-beta0', type=float, default=1.0,
+                        help='FIREFLY: Beta0 (attractiveness) (default: 1.0)')
+    parser.add_argument('--parameter-firefly-gamma', type=float, default=1.0,
+                        help='FIREFLY: Gamma (absorption coefficient) (default: 1.0)')
+    
+    # Algorithm-specific parameters - HS
+    parser.add_argument('--parameter-hs-hmcr', type=float, default=0.9,
+                        help='HS: Harmony Memory Considering Rate (default: 0.9)')
+    parser.add_argument('--parameter-hs-par', type=float, default=0.3,
+                        help='HS: Pitch Adjustment Rate (default: 0.3)')
+    parser.add_argument('--parameter-hs-bw', type=float, default=0.2,
+                        help='HS: Bandwidth (default: 0.2)')
+    
+    return parser.parse_args()
+
+# Parse command-line arguments
+args = parse_arguments()
+
+# Configuration from arguments
 to_use = [
     "AFSA",
     "Greedy", 
@@ -35,18 +169,24 @@ to_use = [
     "HS"
 ]
 
-# Select which algorithms to run (reduce for faster execution)
-algorithms_to_run = ["PSO", "ABC", "ACO", "BAT", "FIREFLY", "HS"]  # You can modify this list
+# Select which algorithms to run from command line
+algorithms_to_run = args.algorithms
 
-partition_problem = Partition_Real(seed=42, num_dims=500)  # Reduced dimensions for faster execution
-subset_problem = Subset_Real(seed=42, num_dims=500)
+# Create output folder if it doesn't exist
+output_folder = args.folder
+if not os.path.exists(output_folder):
+    os.makedirs(output_folder)
 
-problem_to_solve = "partition sum"
-#problem_to_solve = "subset sum"
+# Problem setup with command-line parameters
+partition_problem = Partition_Real(seed=42, num_dims=args.ndims)
+subset_problem = Subset_Real(seed=42, num_dims=args.ndims)
 
-to_verbose = False  # Set to False to avoid cluttering output
-max_iterations = 50  # Reduced iterations for visualization
-population_size = 20  # Reduced population for faster execution
+problem_to_solve = args.problem
+
+to_verbose = args.verbose > 0
+max_iterations = args.max_iterations
+population_size = args.population_size
+run_seed = args.seed if args.seed is not None else 115
 
 # Storage for trajectory data
 trajectory_data = []
@@ -71,7 +211,7 @@ def collect_trajectory_data(algorithm_name, problem, mh_class, **kwargs):
     try:
         for iteration, best_fitness, best_point, points, fts in mh.run_yielded(
             iterations=max_iterations, population=population_size, 
-            verbose=to_verbose, seed=115, **kwargs):
+            verbose=to_verbose, seed=run_seed, **kwargs):
             iterations.append(iteration)
             fitnesses.append(best_fitness)
             
@@ -92,13 +232,21 @@ def collect_trajectory_data(algorithm_name, problem, mh_class, **kwargs):
 # Run algorithms and collect data
 if "AFSA" in algorithms_to_run and "AFSA" in to_use:
     collect_trajectory_data("AFSA", partition_problem if problem_to_solve == "partition sum" else subset_problem, 
-                          AFSAMH_Real, visual_distance_percentage=0.5, velocity_percentage=0.5, 
-                          n_points_to_choose=3, crowded_percentage=0.7, its_stagnation=4, 
-                          leap_percentage=0.3, stagnation_variation=0.4)
+                          AFSAMH_Real, 
+                          visual_distance_percentage=args.parameter_afsa_visualdistancepercentage,
+                          velocity_percentage=args.parameter_afsa_velocitypercentage,
+                          n_points_to_choose=args.parameter_afsa_npointstochoose,
+                          crowded_percentage=args.parameter_afsa_crowdedpercentage,
+                          its_stagnation=args.parameter_afsa_itsstagnation,
+                          leap_percentage=args.parameter_afsa_leappercentage,
+                          stagnation_variation=args.parameter_afsa_stagnationvariation)
 
 if "GreedyWL" in algorithms_to_run and "GreedyWL" in to_use:
     collect_trajectory_data("GreedyWL", partition_problem if problem_to_solve == "partition sum" else subset_problem,
-                          GreedyMH_Real_WithLeap, stagnation_variation=0.4, its_stagnation=5, leap_percentage=0.8)
+                          GreedyMH_Real_WithLeap,
+                          stagnation_variation=args.parameter_greedywl_stagnationvariation,
+                          its_stagnation=args.parameter_greedywl_itsstagnation,
+                          leap_percentage=args.parameter_greedywl_leappercentage)
 
 if "Greedy" in algorithms_to_run and "Greedy" in to_use:
     collect_trajectory_data("Greedy", partition_problem if problem_to_solve == "partition sum" else subset_problem,
@@ -106,24 +254,40 @@ if "Greedy" in algorithms_to_run and "Greedy" in to_use:
 
 if "PSO" in algorithms_to_run and "PSO" in to_use:
     collect_trajectory_data("PSO", partition_problem if problem_to_solve == "partition sum" else subset_problem,
-                          PSOMH_Real, omega=0.8, phi_g=1, phi_p=0.5)
+                          PSOMH_Real,
+                          omega=args.parameter_pso_omega,
+                          phi_g=args.parameter_pso_phig,
+                          phi_p=args.parameter_pso_phip)
 
 if "PSOWL" in algorithms_to_run and "PSOWL" in to_use:
     collect_trajectory_data("PSOWL", partition_problem if problem_to_solve == "partition sum" else subset_problem,
-                          PSOMH_Real_WithLeap, omega=0.8, phi_g=1, phi_p=0.5, 
-                          stagnation_variation=0.4, its_stagnation=5, leap_percentage=0.8)
+                          PSOMH_Real_WithLeap,
+                          omega=args.parameter_psowl_omega,
+                          phi_g=args.parameter_psowl_phig,
+                          phi_p=args.parameter_psowl_phip,
+                          stagnation_variation=args.parameter_psowl_stagnationvariation,
+                          its_stagnation=args.parameter_psowl_itsstagnation,
+                          leap_percentage=args.parameter_psowl_leappercentage)
 
 if "ABC" in algorithms_to_run and "ABC" in to_use:
     collect_trajectory_data("ABC", partition_problem if problem_to_solve == "partition sum" else subset_problem,
-                          ABCMH_Real, limit=20)
+                          ABCMH_Real,
+                          limit=args.parameter_abc_limit)
 
 if "ACO" in algorithms_to_run and "ACO" in to_use:
     collect_trajectory_data("ACO", partition_problem if problem_to_solve == "partition sum" else subset_problem,
-                          ACOMH_Real, evaporation_rate=0.1, alpha=1.0, beta=2.0)
+                          ACOMH_Real,
+                          evaporation_rate=args.parameter_aco_evaporationrate,
+                          alpha=args.parameter_aco_alpha,
+                          beta=args.parameter_aco_beta)
 
 if "BAT" in algorithms_to_run and "BAT" in to_use:
     collect_trajectory_data("BAT", partition_problem if problem_to_solve == "partition sum" else subset_problem,
-                          BatMH_Real, fmin=0, fmax=2, A=0.9, r0=0.9)
+                          BatMH_Real,
+                          fmin=args.parameter_bat_fmin,
+                          fmax=args.parameter_bat_fmax,
+                          A=args.parameter_bat_a,
+                          r0=args.parameter_bat_r0)
 
 if "BH" in algorithms_to_run and "BH" in to_use:
     collect_trajectory_data("Blackhole", partition_problem if problem_to_solve == "partition sum" else subset_problem,
@@ -131,15 +295,22 @@ if "BH" in algorithms_to_run and "BH" in to_use:
 
 if "CUCKOO" in algorithms_to_run and "CUCKOO" in to_use:
     collect_trajectory_data("Cuckoo", partition_problem if problem_to_solve == "partition sum" else subset_problem,
-                          CuckooMH_Real, pa=0.25)
+                          CuckooMH_Real,
+                          pa=args.parameter_cuckoo_pa)
 
 if "FIREFLY" in algorithms_to_run and "FIREFLY" in to_use:
     collect_trajectory_data("Firefly", partition_problem if problem_to_solve == "partition sum" else subset_problem,
-                          FireflyMH_Real, alpha=0.5, beta0=1.0, gamma=1.0)
+                          FireflyMH_Real,
+                          alpha=args.parameter_firefly_alpha,
+                          beta0=args.parameter_firefly_beta0,
+                          gamma=args.parameter_firefly_gamma)
 
 if "HS" in algorithms_to_run and "HS" in to_use:
     collect_trajectory_data("Harmony Search", partition_problem if problem_to_solve == "partition sum" else subset_problem,
-                          HSMH_Real, hmcr=0.9, par=0.3, bw=0.2)
+                          HSMH_Real,
+                          hmcr=args.parameter_hs_hmcr,
+                          par=args.parameter_hs_par,
+                          bw=args.parameter_hs_bw)
 
 # Create DataFrame from collected data
 df = pd.DataFrame(trajectory_data)
@@ -199,8 +370,9 @@ if len(df) > 0:
     plt.tight_layout()
     
     # Save the plot
-    plt.savefig(f'metaheuristics_trajectories_{problem_to_solve.replace(" ", "_")}.png', 
-                dpi=300, bbox_inches='tight')
+    output_path = os.path.join(output_folder, f'metaheuristics_trajectories_{problem_to_solve.replace(" ", "_")}.png')
+    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    print(f"\nSaved trajectory plot to: {output_path}")
     plt.show()
     
     # Print summary statistics
@@ -239,8 +411,9 @@ if len(df) > 0:
     plt.tight_layout()
     
     # Save the seaborn plot
-    plt.savefig(f'metaheuristics_seaborn_{problem_to_solve.replace(" ", "_")}.png', 
-                dpi=300, bbox_inches='tight')
+    output_path = os.path.join(output_folder, f'metaheuristics_seaborn_{problem_to_solve.replace(" ", "_")}.png')
+    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    print(f"Saved seaborn plot to: {output_path}")
     plt.show()
     
 else:

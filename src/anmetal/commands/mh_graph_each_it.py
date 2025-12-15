@@ -30,40 +30,145 @@ import glob
 import argparse
 import shutil
 
-parser = argparse.ArgumentParser(description='Metaheuristic Animation Generator - Creates visualizations and videos of metaheuristic optimization algorithms')
-#parser.add_argument("--a", default=1, type=int, help="This is the 'a' variable")
+def parse_arguments():
+    """Parse command-line arguments"""
+    parser = argparse.ArgumentParser(
+        description='Metaheuristic Animation Generator - Creates visualizations and videos of metaheuristic optimization algorithms',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # 2D plotting with ABC
+  python mh_graph_each_it.py --mh ABC --problem Camelback --iterations 20 --population 30
+  
+  # 3D plotting with custom parameters
+  python mh_graph_each_it.py --mh Firefly --problem Goldsteinprice --iterations 15 --plottype 3d --fps 30 --parameter-firefly-alpha 0.6
+  
+  # PSO with traces and custom parameters
+  python mh_graph_each_it.py --mh PSO --problem Quartic --traces all --parameter-pso-omega 0.7 --parameter-pso-phig 1.5
+  
+  # Custom output folder
+  python mh_graph_each_it.py --mh ABC --problem Shubert --folder ./my_results --iterations 50
 
-parser.add_argument("--seed", default=0, type=int, help="The integer to be seed of random number generator")
-parser.add_argument("--mh", default="", type=str, help="\
-    Name of Metaheuristic, can be one of:\n\
-    AFSA\n\
-    PSO\n\
-    PSOWL\n\
-    Greed\n\
-    GreedWL\n\
-    ABC\n\
-    ACO\n\
-    Bat\n\
-    Blackhole\n\
-    Cuckoo\n\
-    Firefly\n\
-    Harmony")
-parser.add_argument("--problem", default="Goldsteinprice", type=str, help="\
-    Name of the problem, can be one of:\
-    Camelback\n\
-    Goldsteinprice\n\
-    Pshubert1\n\
-    Pshubert2\n\
-    Shubert\n\
-    Quartic")
-parser.add_argument("--verbose", default=1, type=int, help="1 if print logs, 0 if not print")
-parser.add_argument("--iterations", default=100, type=int, help="Number of iterations in Metaheuristic")
-parser.add_argument("--population", default=30, type=int, help="Number of solutions in Metaheuristic")
-parser.add_argument("--plottype", default="2d", choices=["2d", "3d"], help="Plot type: 2d or 3d")
-parser.add_argument("--traces", default="none", choices=["all", "none", "smooth"], help="Keep traces: all, none, or smooth")
-parser.add_argument("--fps", default=10, type=int, help="Frames per second for the output video")
+Available algorithms: AFSA, PSO, PSOWL, Greed, GreedWL, ABC, ACO, Bat, Blackhole, Cuckoo, Firefly, Harmony
+Available problems: Camelback, Goldsteinprice, Pshubert1, Pshubert2, Shubert, Quartic
+        """
+    )
+    
+    # Basic configuration
+    parser.add_argument('--folder', type=str, default='mh_graphs',
+                        help='Output folder for plots and videos (default: mh_graphs)')
+    parser.add_argument("--seed", default=0, type=int, 
+                        help="Random seed (default: 0)")
+    parser.add_argument("--mh", default="AFSA", type=str,
+                        choices=['AFSA', 'PSO', 'PSOWL', 'Greed', 'GreedWL', 'ABC', 'ACO', 'Bat', 'Blackhole', 'Cuckoo', 'Firefly', 'Harmony'],
+                        help="Metaheuristic algorithm to use (default: AFSA)")
+    parser.add_argument("--problem", default="Goldsteinprice", type=str,
+                        choices=['Camelback', 'Goldsteinprice', 'Pshubert1', 'Pshubert2', 'Shubert', 'Quartic'],
+                        help="Optimization problem (default: Goldsteinprice)")
+    parser.add_argument("--verbose", default=1, type=int, choices=[0, 1],
+                        help="Print logs: 1=yes, 0=no (default: 1)")
+    parser.add_argument("--iterations", default=100, type=int,
+                        help="Number of iterations (default: 100)")
+    parser.add_argument("--population", default=30, type=int,
+                        help="Population size (default: 30)")
+    parser.add_argument("--plottype", default="2d", choices=["2d", "3d"],
+                        help="Plot type: 2d or 3d (default: 2d)")
+    parser.add_argument("--traces", default="none", choices=["all", "none", "smooth"],
+                        help="Trace visualization: all, none, or smooth (default: none)")
+    parser.add_argument("--fps", default=10, type=int,
+                        help="Frames per second for video (default: 10)")
+    
+    # Algorithm-specific parameters - AFSA
+    parser.add_argument('--parameter-afsa-visualdistancepercentage', type=float, default=0.2,
+                        help='AFSA: Visual distance percentage (default: 0.2)')
+    parser.add_argument('--parameter-afsa-velocitypercentage', type=float, default=0.3,
+                        help='AFSA: Velocity percentage (default: 0.3)')
+    parser.add_argument('--parameter-afsa-npointstochoose', type=int, default=5,
+                        help='AFSA: Number of points to choose (default: 5)')
+    parser.add_argument('--parameter-afsa-crowdedpercentage', type=float, default=0.8,
+                        help='AFSA: Crowded percentage (default: 0.8)')
+    parser.add_argument('--parameter-afsa-itsstagnation', type=int, default=7,
+                        help='AFSA: Iterations stagnation (default: 7)')
+    parser.add_argument('--parameter-afsa-leappercentage', type=float, default=0.2,
+                        help='AFSA: Leap percentage (default: 0.2)')
+    parser.add_argument('--parameter-afsa-stagnationvariation', type=float, default=0.4,
+                        help='AFSA: Stagnation variation (default: 0.4)')
+    
+    # Algorithm-specific parameters - PSO
+    parser.add_argument('--parameter-pso-omega', type=float, default=0.5,
+                        help='PSO: Omega (inertia weight) (default: 0.5)')
+    parser.add_argument('--parameter-pso-phig', type=float, default=1.0,
+                        help='PSO: Phi_g (global coefficient) (default: 1.0)')
+    parser.add_argument('--parameter-pso-phip', type=float, default=2.0,
+                        help='PSO: Phi_p (personal coefficient) (default: 2.0)')
+    
+    # Algorithm-specific parameters - PSOWL
+    parser.add_argument('--parameter-psowl-omega', type=float, default=0.5,
+                        help='PSOWL: Omega (inertia weight) (default: 0.5)')
+    parser.add_argument('--parameter-psowl-phig', type=float, default=1.0,
+                        help='PSOWL: Phi_g (global coefficient) (default: 1.0)')
+    parser.add_argument('--parameter-psowl-phip', type=float, default=2.0,
+                        help='PSOWL: Phi_p (personal coefficient) (default: 2.0)')
+    parser.add_argument('--parameter-psowl-stagnationvariation', type=float, default=0.4,
+                        help='PSOWL: Stagnation variation (default: 0.4)')
+    parser.add_argument('--parameter-psowl-itsstagnation', type=int, default=5,
+                        help='PSOWL: Iterations stagnation (default: 5)')
+    parser.add_argument('--parameter-psowl-leappercentage', type=float, default=0.8,
+                        help='PSOWL: Leap percentage (default: 0.8)')
+    
+    # Algorithm-specific parameters - GreedWL
+    parser.add_argument('--parameter-greedwl-stagnationvariation', type=float, default=0.4,
+                        help='GreedWL: Stagnation variation (default: 0.4)')
+    parser.add_argument('--parameter-greedwl-itsstagnation', type=int, default=5,
+                        help='GreedWL: Iterations stagnation (default: 5)')
+    parser.add_argument('--parameter-greedwl-leappercentage', type=float, default=0.8,
+                        help='GreedWL: Leap percentage (default: 0.8)')
+    
+    # Algorithm-specific parameters - ABC
+    parser.add_argument('--parameter-abc-limit', type=int, default=20,
+                        help='ABC: Limit parameter (default: 20)')
+    
+    # Algorithm-specific parameters - ACO
+    parser.add_argument('--parameter-aco-evaporationrate', type=float, default=0.1,
+                        help='ACO: Evaporation rate (default: 0.1)')
+    parser.add_argument('--parameter-aco-alpha', type=float, default=1.0,
+                        help='ACO: Alpha parameter (default: 1.0)')
+    parser.add_argument('--parameter-aco-beta', type=float, default=2.0,
+                        help='ACO: Beta parameter (default: 2.0)')
+    
+    # Algorithm-specific parameters - BAT
+    parser.add_argument('--parameter-bat-fmin', type=float, default=0.0,
+                        help='BAT: Minimum frequency (default: 0.0)')
+    parser.add_argument('--parameter-bat-fmax', type=float, default=2.0,
+                        help='BAT: Maximum frequency (default: 2.0)')
+    parser.add_argument('--parameter-bat-a', type=float, default=0.9,
+                        help='BAT: Loudness (default: 0.9)')
+    parser.add_argument('--parameter-bat-r0', type=float, default=0.9,
+                        help='BAT: Pulse rate (default: 0.9)')
+    
+    # Algorithm-specific parameters - CUCKOO
+    parser.add_argument('--parameter-cuckoo-pa', type=float, default=0.25,
+                        help='CUCKOO: Probability of abandonment (default: 0.25)')
+    
+    # Algorithm-specific parameters - FIREFLY
+    parser.add_argument('--parameter-firefly-alpha', type=float, default=0.5,
+                        help='FIREFLY: Alpha (randomness) (default: 0.5)')
+    parser.add_argument('--parameter-firefly-beta0', type=float, default=1.0,
+                        help='FIREFLY: Beta0 (attractiveness) (default: 1.0)')
+    parser.add_argument('--parameter-firefly-gamma', type=float, default=1.0,
+                        help='FIREFLY: Gamma (absorption coefficient) (default: 1.0)')
+    
+    # Algorithm-specific parameters - HARMONY
+    parser.add_argument('--parameter-harmony-hmcr', type=float, default=0.9,
+                        help='HARMONY: Harmony Memory Considering Rate (default: 0.9)')
+    parser.add_argument('--parameter-harmony-par', type=float, default=0.3,
+                        help='HARMONY: Pitch Adjustment Rate (default: 0.3)')
+    parser.add_argument('--parameter-harmony-bw', type=float, default=0.2,
+                        help='HARMONY: Bandwidth (default: 0.2)')
+    
+    return parser.parse_args()
 
-args = parser.parse_args()
+args = parse_arguments()
 
 print("args: ", args)
 
@@ -103,51 +208,105 @@ else:
 # Initialize metaheuristics based on user selection
 mh_name = str.lower(args.mh)
 
-if mh_name == "afsa" or args.mh == "":
+if mh_name == "afsa":
     mh = AFSAMH_Real(min_val, max_val, 2, False, prob.func, None, None)
-    gen = mh.run_yielded(verbose=to_verbose, iterations=iterations, population=population, visual_distance_percentage=0.2, velocity_percentage=0.3, n_points_to_choose=5, crowded_percentage=0.8, its_stagnation=7, leap_percentage=0.2, stagnation_variation=0.4, seed=seed)
+    gen = mh.run_yielded(verbose=to_verbose, iterations=iterations, population=population, 
+                        visual_distance_percentage=args.parameter_afsa_visualdistancepercentage,
+                        velocity_percentage=args.parameter_afsa_velocitypercentage,
+                        n_points_to_choose=args.parameter_afsa_npointstochoose,
+                        crowded_percentage=args.parameter_afsa_crowdedpercentage,
+                        its_stagnation=args.parameter_afsa_itsstagnation,
+                        leap_percentage=args.parameter_afsa_leappercentage,
+                        stagnation_variation=args.parameter_afsa_stagnationvariation,
+                        seed=seed)
 elif mh_name == "pso":
     mh = PSOMH_Real(min_val, max_val, 2, False, prob.func, None, None)
-    gen = mh.run_yielded(verbose=to_verbose, iterations=iterations, population=population, omega=0.5, phi_g=1, phi_p=2)
+    gen = mh.run_yielded(verbose=to_verbose, iterations=iterations, population=population,
+                        omega=args.parameter_pso_omega,
+                        phi_g=args.parameter_pso_phig,
+                        phi_p=args.parameter_pso_phip,
+                        seed=seed)
 elif mh_name == "psowl":
     mh = PSOMH_Real_WithLeap(min_val, max_val, 2, False, prob.func, None, None)
-    gen = mh.run_yielded(verbose=to_verbose, iterations=iterations, population=population, omega=0.5, phi_g=1, phi_p=2, stagnation_variation=0.4, its_stagnation=5, leap_percentage=0.8)
+    gen = mh.run_yielded(verbose=to_verbose, iterations=iterations, population=population,
+                        omega=args.parameter_psowl_omega,
+                        phi_g=args.parameter_psowl_phig,
+                        phi_p=args.parameter_psowl_phip,
+                        stagnation_variation=args.parameter_psowl_stagnationvariation,
+                        its_stagnation=args.parameter_psowl_itsstagnation,
+                        leap_percentage=args.parameter_psowl_leappercentage,
+                        seed=seed)
 elif mh_name == "greed":
     mh = GreedyMH_Real(min_val, max_val, 2, False, prob.func, None, None)
-    gen = mh.run_yielded(verbose=to_verbose, iterations=iterations, population=population)
+    gen = mh.run_yielded(verbose=to_verbose, iterations=iterations, population=population, seed=seed)
 elif mh_name == "greedwl":
     mh = GreedyMH_Real_WithLeap(min_val, max_val, 2, False, prob.func, None, None)
-    gen = mh.run_yielded(verbose=to_verbose, iterations=iterations, population=population, stagnation_variation=0.4, its_stagnation=5, leap_percentage=0.8)
+    gen = mh.run_yielded(verbose=to_verbose, iterations=iterations, population=population,
+                        stagnation_variation=args.parameter_greedwl_stagnationvariation,
+                        its_stagnation=args.parameter_greedwl_itsstagnation,
+                        leap_percentage=args.parameter_greedwl_leappercentage,
+                        seed=seed)
 elif mh_name == "abc":
     mh = ArtificialBeeColony(min_val, max_val, 2, False, prob.func, None, None)
-    gen = mh.run_yielded(verbose=to_verbose, iterations=iterations, population=population, limit=20, seed=seed)
+    gen = mh.run_yielded(verbose=to_verbose, iterations=iterations, population=population,
+                        limit=args.parameter_abc_limit,
+                        seed=seed)
 elif mh_name == "aco":
     mh = AntColony(min_val, max_val, 2, False, prob.func, None, None)
-    gen = mh.run_yielded(verbose=to_verbose, iterations=iterations, population=population, evaporation_rate=0.1, alpha=1.0, beta=2.0, seed=seed)
+    gen = mh.run_yielded(verbose=to_verbose, iterations=iterations, population=population,
+                        evaporation_rate=args.parameter_aco_evaporationrate,
+                        alpha=args.parameter_aco_alpha,
+                        beta=args.parameter_aco_beta,
+                        seed=seed)
 elif mh_name == "bat":
     mh = BatAlgorithm(min_val, max_val, 2, False, prob.func, None, None)
-    gen = mh.run_yielded(verbose=to_verbose, iterations=iterations, population=population, fmin=0, fmax=2, A=0.9, r0=0.9, seed=seed)
+    gen = mh.run_yielded(verbose=to_verbose, iterations=iterations, population=population,
+                        fmin=args.parameter_bat_fmin,
+                        fmax=args.parameter_bat_fmax,
+                        A=args.parameter_bat_a,
+                        r0=args.parameter_bat_r0,
+                        seed=seed)
 elif mh_name == "blackhole":
     mh = BlackHole(min_val, max_val, 2, False, prob.func, None, None)
     gen = mh.run_yielded(verbose=to_verbose, iterations=iterations, population=population, seed=seed)
 elif mh_name == "cuckoo":
     mh = CuckooSearch(min_val, max_val, 2, False, prob.func, None, None)
-    gen = mh.run_yielded(verbose=to_verbose, iterations=iterations, population=population, pa=0.25, seed=seed)
+    gen = mh.run_yielded(verbose=to_verbose, iterations=iterations, population=population,
+                        pa=args.parameter_cuckoo_pa,
+                        seed=seed)
 elif mh_name == "firefly":
     mh = FireflyAlgorithm(min_val, max_val, 2, False, prob.func, None, None)
-    gen = mh.run_yielded(verbose=to_verbose, iterations=iterations, population=population, alpha=0.5, beta0=1.0, gamma=1.0, seed=seed)
+    gen = mh.run_yielded(verbose=to_verbose, iterations=iterations, population=population,
+                        alpha=args.parameter_firefly_alpha,
+                        beta0=args.parameter_firefly_beta0,
+                        gamma=args.parameter_firefly_gamma,
+                        seed=seed)
 elif mh_name == "harmony":
     mh = HarmonySearch(min_val, max_val, 2, False, prob.func, None, None)
-    gen = mh.run_yielded(verbose=to_verbose, iterations=iterations, population=population, hmcr=0.9, par=0.3, bw=0.2, seed=seed)
+    gen = mh.run_yielded(verbose=to_verbose, iterations=iterations, population=population,
+                        hmcr=args.parameter_harmony_hmcr,
+                        par=args.parameter_harmony_par,
+                        bw=args.parameter_harmony_bw,
+                        seed=seed)
 else:
     print(f"Unknown metaheuristic: {args.mh}. Using AFSA as default.")
     mh = AFSAMH_Real(min_val, max_val, 2, False, prob.func, None, None)
-    gen = mh.run_yielded(verbose=to_verbose, iterations=iterations, population=population, visual_distance_percentage=0.2, velocity_percentage=0.3, n_points_to_choose=5, crowded_percentage=0.8, its_stagnation=7, leap_percentage=0.2, stagnation_variation=0.4, seed=seed)
+    gen = mh.run_yielded(verbose=to_verbose, iterations=iterations, population=population,
+                        visual_distance_percentage=args.parameter_afsa_visualdistancepercentage,
+                        velocity_percentage=args.parameter_afsa_velocitypercentage,
+                        n_points_to_choose=args.parameter_afsa_npointstochoose,
+                        crowded_percentage=args.parameter_afsa_crowdedpercentage,
+                        its_stagnation=args.parameter_afsa_itsstagnation,
+                        leap_percentage=args.parameter_afsa_leappercentage,
+                        stagnation_variation=args.parameter_afsa_stagnationvariation,
+                        seed=seed)
 
-folderpath = join("mh_graphs", args.mh+"_"+args.problem)
+# Create output folder structure
+folderpath = join(args.folder, args.mh+"_"+args.problem)
 if exists(folderpath):
     shutil.rmtree(folderpath, ignore_errors=True)
 os.makedirs(folderpath)
+print(f"Output folder: {folderpath}")
 
 def create_video_from_images(image_folder, output_video, fps=10):
     """Create MP4 video from sequence of PNG images"""

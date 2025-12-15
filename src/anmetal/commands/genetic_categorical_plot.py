@@ -47,6 +47,10 @@ def create_video_from_images(image_folder, output_video, fps=10):
 def main():
     parser = argparse.ArgumentParser(description='Genetic Algorithm Categorical Visualization')
     
+    # Output Parameters
+    parser.add_argument('--folder', type=str, default='mh_graphs',
+                        help='Output folder for plots and videos (default: mh_graphs)')
+    
     # GA Parameters
     parser.add_argument("--seed", default=0, type=int, help="Random seed")
     parser.add_argument("--iterations", default=50, type=int, help="Number of iterations")
@@ -142,10 +146,11 @@ def main():
                              seed=seed, verbose=True)
 
     # Output setup
-    folderpath = join("mh_graphs", f"genetic_{args.problem}_{args.categorytype}")
+    folderpath = join(args.folder, f"genetic_{args.problem}_{args.categorytype}")
     if exists(folderpath):
         shutil.rmtree(folderpath, ignore_errors=True)
     os.makedirs(folderpath)
+    print(f"Output folder: {folderpath}")
     
     csv_file = open(join(folderpath, "history.csv"), "w", newline="")
     csv_writer = csv.writer(csv_file)
