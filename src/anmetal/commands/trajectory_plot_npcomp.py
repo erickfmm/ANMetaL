@@ -1,5 +1,6 @@
 #This file plots the trajectories of Real Metaheuristics with NP-Complete problems
 import matplotlib.pyplot as plt
+plt.switch_backend('Agg')
 import seaborn as sns
 import numpy as np
 import pandas as pd
@@ -59,6 +60,8 @@ Examples:
                         help='Random seed for algorithms (optional, default: 115)')
     parser.add_argument('--ndims', type=int, default=500,
                         help='Number of dimensions for the problem (default: 500)')
+    parser.add_argument('--format', type=str, default='png', choices=['png', 'svg'],
+                        help='Output image format: png (raster) or svg (vector) (default: png)')
     
     # Algorithm-specific parameters - AFSA
     parser.add_argument('--parameter-afsa-visualdistancepercentage', type=float, default=0.5,
@@ -370,7 +373,7 @@ if len(df) > 0:
     plt.tight_layout()
     
     # Save the plot
-    output_path = os.path.join(output_folder, f'metaheuristics_trajectories_{problem_to_solve.replace(" ", "_")}.png')
+    output_path = os.path.join(output_folder, f'metaheuristics_trajectories_{problem_to_solve.replace(" ", "_")}.{args.format}')
     plt.savefig(output_path, dpi=300, bbox_inches='tight')
     print(f"\nSaved trajectory plot to: {output_path}")
     plt.show()
@@ -411,7 +414,7 @@ if len(df) > 0:
     plt.tight_layout()
     
     # Save the seaborn plot
-    output_path = os.path.join(output_folder, f'metaheuristics_seaborn_{problem_to_solve.replace(" ", "_")}.png')
+    output_path = os.path.join(output_folder, f'metaheuristics_seaborn_{problem_to_solve.replace(" ", "_")}.{args.format}')
     plt.savefig(output_path, dpi=300, bbox_inches='tight')
     print(f"Saved seaborn plot to: {output_path}")
     plt.show()

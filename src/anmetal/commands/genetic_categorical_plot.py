@@ -20,27 +20,19 @@ from anmetal.problems.nphard_categorical.knapsack import Knapsack_Categorical
 from anmetal.problems.nphard_categorical.sudoku import Sudoku
 from anmetal.problems.nphard_categorical.sudoku_optimized import SudokuOptimized
 
-def create_video_from_images(image_folder, output_video, fps=10):
-    """Create MP4 video from sequence of PNG images"""
-    images = sorted(glob.glob(os.path.join(image_folder, "gen_cat_*.png")), 
-                   key=lambda x: int(os.path.basename(x).split('_')[2].split('.')[0]))
-    
-    if not images:
-        print("No images found to create video")
+def create_video_from_frames(frames, output_video, fps=10):
+    """Create MP4 video from a list of BGR numpy frame arrays"""
+    if not frames:
+        print("No frames to create video")
         return
-    
-    # Read first image to get dimensions
-    frame = cv2.imread(images[0])
-    height, width, layers = frame.shape
-    
-    # Define codec and create VideoWriter object
+
+    height, width = frames[0].shape[:2]
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     video = cv2.VideoWriter(output_video, fourcc, fps, (width, height))
-    
-    for image in images:
-        frame = cv2.imread(image)
+
+    for frame in frames:
         video.write(frame)
-    
+
     video.release()
     print(f"Video saved as: {output_video}")
 
@@ -64,6 +56,8 @@ def main():
     # Visualization Parameters
     parser.add_argument("--categorytype", default="character", choices=["character", "color", "icon", "number", "value", "colorvalue"], help="Visualization type for categories")
     parser.add_argument("--fps", default=5, type=int, help="Frames per second for video")
+    parser.add_argument("--format", default="png", choices=["png", "svg"],
+                        help="Output image format: png (raster) or svg (vector) (default: png)")
     
     # Problem Parameters
     parser.add_argument("--problem", default="knapsack", choices=["knapsack", "sudoku", "sudoku_opt"], help="Problem to solve")
@@ -172,6 +166,8 @@ def main():
     
     history = []
     
+    video_frames = []
+
     for iteration, best_fitness, best_point, points, fitnesses in gen:
         print(f"Processing iteration {iteration}...", end='\r')
         
@@ -240,15 +236,21 @@ def main():
             ax_fit.text(v, y_pos[i], f"{v:.2f}", va='center')
 
         plt.tight_layout()
-        plt.savefig(join(folderpath, f"gen_cat_{iteration:04d}.png"), dpi=100)
+        # Capture frame for video using the in-memory canvas (works for both png and svg modes)
+        fig.canvas.draw()
+        w, h = fig.canvas.get_width_height()
+        frame_rgba = np.frombuffer(fig.canvas.buffer_rgba(), dtype=np.uint8).reshape(h, w, 4)
+        video_frames.append(cv2.cvtColor(frame_rgba, cv2.COLOR_RGBA2BGR))
+        # Save the plot as the chosen format
+        plt.savefig(join(folderpath, f"gen_cat_{iteration:04d}.{args.format}"), dpi=100)
         plt.close(fig)
 
     csv_file.close()
     print("\nOptimization finished.")
     
-    # Create Video
+    # Create Video from captured frames
     video_path = join(folderpath, f"genetic_{args.problem}_animation.mp4")
-    create_video_from_images(folderpath, video_path, args.fps)
+    create_video_from_frames(video_frames, video_path, args.fps)
 
 if __name__ == "__main__":
     main()

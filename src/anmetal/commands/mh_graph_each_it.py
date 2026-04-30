@@ -19,6 +19,7 @@ from anmetal.optimizer.population.Harmony.harmony import HarmonySearch
 import anmetal.problems.nonlinear_functions.two_inputs as problems_2
 
 import matplotlib.pyplot as plt
+plt.switch_backend('Agg')
 from mpl_toolkits.mplot3d import Axes3D
 from numpy.random import RandomState
 import numpy as np
@@ -77,6 +78,8 @@ Available problems: Camelback, Goldsteinprice, Pshubert1, Pshubert2, Shubert, Qu
                         help="Trace visualization: all, none, or smooth (default: none)")
     parser.add_argument("--fps", default=10, type=int,
                         help="Frames per second for video (default: 10)")
+    parser.add_argument("--format", default="png", choices=["png", "svg"],
+                        help="Output image format: png (raster) or svg (vector) (default: png)")
     
     # Algorithm-specific parameters - AFSA
     parser.add_argument('--parameter-afsa-visualdistancepercentage', type=float, default=0.2,
@@ -308,27 +311,19 @@ if exists(folderpath):
 os.makedirs(folderpath)
 print(f"Output folder: {folderpath}")
 
-def create_video_from_images(image_folder, output_video, fps=10):
-    """Create MP4 video from sequence of PNG images"""
-    images = sorted(glob.glob(os.path.join(image_folder, "mhgraph_*.png")), 
-                   key=lambda x: int(os.path.basename(x).split('_')[1].split('.')[0]))
-    
-    if not images:
-        print("No images found to create video")
+def create_video_from_frames(frames, output_video, fps=10):
+    """Create MP4 video from a list of BGR numpy frame arrays"""
+    if not frames:
+        print("No frames to create video")
         return
-    
-    # Read first image to get dimensions
-    frame = cv2.imread(images[0])
-    height, width, layers = frame.shape
-    
-    # Define codec and create VideoWriter object
+
+    height, width = frames[0].shape[:2]
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     video = cv2.VideoWriter(output_video, fourcc, fps, (width, height))
-    
-    for image in images:
-        frame = cv2.imread(image)
+
+    for frame in frames:
         video.write(frame)
-    
+
     video.release()
     print(f"Video saved as: {output_video}")
 
@@ -379,6 +374,8 @@ if plot_3d:
 else:
     fig = plt.figure(figsize=(10, 8))
     ax = fig.add_subplot(111)
+
+video_frames = []
 
 for frame_idx, step_data in enumerate(history):
     iteration = step_data['iteration']
@@ -453,14 +450,19 @@ for frame_idx, step_data in enumerate(history):
         else:
             ax.plot(ps_[i][0], ps_[i][1], '*', color=color, markersize=8)
     
-    # Save the plot
     plt.tight_layout()
-    plt.savefig(join(folderpath, f"mhgraph_{iteration:04d}.png"), dpi=150, bbox_inches='tight')
+    # Capture frame for video using the in-memory canvas (works for both png and svg modes)
+    fig.canvas.draw()
+    w, h = fig.canvas.get_width_height()
+    frame_rgba = np.frombuffer(fig.canvas.buffer_rgba(), dtype=np.uint8).reshape(h, w, 4)
+    video_frames.append(cv2.cvtColor(frame_rgba, cv2.COLOR_RGBA2BGR))
+    # Save the plot as the chosen format
+    plt.savefig(join(folderpath, f"mhgraph_{iteration:04d}.{args.format}"), dpi=150, bbox_inches='tight')
 print("\nFrames generated.")
 
-# Create video from images
+# Create video from captured frames
 video_path = join(folderpath, f"{args.mh}_{args.problem}_animation.mp4")
-create_video_from_images(folderpath, video_path, fps)
+create_video_from_frames(video_frames, video_path, fps)
 
 print(f"Animation completed! Images saved in: {folderpath}")
 print(f"Video saved as: {video_path}")
@@ -469,5 +471,6 @@ print(f"Video saved as: {video_path}")
 # 2D plotting: python mh_graph_each_it.py --mh ABC --problem Camelback --iterations 20 --population 30
 # 3D plotting: python mh_graph_each_it.py --mh Firefly --problem Goldsteinprice --iterations 15 --plottype 3d --fps 30
 # With traces: python mh_graph_each_it.py --mh PSO --problem Quartic --traces all
+# Vector graphics: python mh_graph_each_it.py --mh ABC --problem Camelback --format svg
 # Available algorithms: AFSA, PSO, PSOWL, Greed, GreedWL, ABC, ACO, Bat, Blackhole, Cuckoo, Firefly, Harmony
 # Available problems: Camelback, Goldsteinprice, Pshubert1, Pshubert2, Shubert, Quartic
