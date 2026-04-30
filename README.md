@@ -13,6 +13,7 @@ ANMetaL now includes powerful visualization capabilities that create animated vi
 - **12 Population-based Algorithms**: ABC, ACO, AFSA, Bat, Black Hole, Cuckoo, Firefly, Harmony Search, PSO, Greedy, and more
 - **2D & 3D Plotting**: Watch particles move in 2D space or explore 3D fitness landscapes
 - **Automatic Video Generation**: Creates smooth MP4 animations with customizable frame rates
+- **Vector & Raster Output**: Save plots as SVG (scalable vector graphics) or PNG (raster) with the `--format` flag
 - **Multiple Test Functions**: Visualize optimization on various benchmark problems
 - **Genetic Algorithm Visualization**: Track evolution on categorical problems like Knapsack and Sudoku
 
@@ -69,6 +70,7 @@ For complete documentation of all visualization commands and options, see the [C
 - Multiple category visualization types (character, color, icon, number, value)
 - Trajectory tracking and convergence analysis
 - Automated video generation
+- **Vector (SVG) and raster (PNG) output** — choose with `--format svg` or `--format png`
 - Customizable frame rates and plot styles
 
 ## 🚀 Installation
@@ -243,6 +245,7 @@ anmetal mh_graph_each_it --mh <algorithm> --problem <function> [options]
 - `--plottype <2d|3d>` - Plot type (default: `2d`)
 - `--traces <all|none|smooth>` - Trace visualization mode (default: `none`)
 - `--fps <int>` - Video frame rate (default: 10)
+- `--format <png|svg>` - Output image format: `png` for raster (default) or `svg` for scalable vector graphics
 
 **Algorithm-Specific Parameters:**
 
@@ -333,6 +336,9 @@ anmetal mh_graph_each_it --mh PSO --problem Quartic --traces all --parameter-pso
 
 # Custom output folder
 anmetal mh_graph_each_it --mh ABC --problem Shubert --folder ./my_results --iterations 50
+
+# Save frames as SVG vector graphics (video is still MP4)
+anmetal mh_graph_each_it --mh ABC --problem Camelback --format svg
 ```
 
 #### 2. Genetic Algorithm Visualization (`genetic_categorical_plot`)
@@ -357,6 +363,7 @@ anmetal genetic_categorical_plot --problem <problem> [options]
 - `--categorytype <type>` - Visualization type (default: `character`)
   - Options: `character`, `color`, `icon`, `number`, `value`, `colorvalue`
 - `--fps <int>` - Video frame rate (default: 5)
+- `--format <png|svg>` - Output image format: `png` for raster (default) or `svg` for scalable vector graphics
 - `--problem <problem>` - Problem to solve (required)
   - Options: `knapsack`, `sudoku`, `sudoku_opt`
 - `--dims <int>` - Problem dimensions (for Knapsack, default: 20)
@@ -371,6 +378,9 @@ anmetal genetic_categorical_plot --problem sudoku_opt --categorytype colorvalue 
 
 # With leap variant
 anmetal genetic_categorical_plot --problem knapsack --leap 1 --mutability 0.2 --elitist 0.4
+
+# Save frames as SVG vector graphics (video is still MP4)
+anmetal genetic_categorical_plot --problem knapsack --format svg
 ```
 
 #### 3. NP-Complete Trajectory Plotting (`trajectory_plot_npcomp`)
@@ -395,6 +405,7 @@ anmetal trajectory_plot_npcomp --algorithms <alg1> <alg2> ... [options]
 - `--population-size <int>` - Population size (default: 20)
 - `--seed <int>` - Random seed (default: 115)
 - `--ndims <int>` - Problem dimensions (default: 500)
+- `--format <png|svg>` - Output image format: `png` for raster (default) or `svg` for scalable vector graphics
 
 **Algorithm-Specific Parameters:**
 All algorithm parameters from `mh_graph_each_it` are supported with the same names.
@@ -409,6 +420,9 @@ anmetal trajectory_plot_npcomp --algorithms AFSA --parameter-afsa-visualdistance
 
 # Multiple algorithms with custom settings
 anmetal trajectory_plot_npcomp --algorithms PSO ABC ACO --folder ./results --ndims 1000 --seed 42 --verbose 1
+
+# Save plots as SVG vector graphics
+anmetal trajectory_plot_npcomp --algorithms PSO ABC --format svg
 ```
 
 #### 4. Nonlinear Function Optimization (`nonlinear_mh_optimization`)
