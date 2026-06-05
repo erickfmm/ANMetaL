@@ -9,7 +9,6 @@
 <script src="https://cdn.jsdelivr.net/npm/jszip@3/dist/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/file-saver@2/dist/FileSaver.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/ffmpeg.wasm@0.12/dist/ffmpeg.min.js"></script>
 <script src="anmetal.min.js"></script>
 <style>
 body { font-family: 'Inter', system-ui, sans-serif; }
@@ -989,8 +988,24 @@ id$('g-dl-zip').addEventListener('click', async () => {
   btn.disabled = false; btn.textContent = 'Download ZIP (Images)';
 });
 
-function recordVideoAsWebM(frames, fps) {
-  return new Promise(resolve => {
+function getSupportedMimeType(preferMp4) {
+  const mp4Types = [
+    'video/mp4;codecs=avc1.42E01E',
+    'video/mp4;codecs=avc1',
+    'video/mp4'
+  ];
+  if (preferMp4) {
+    for (const t of mp4Types) {
+      if (MediaRecorder.isTypeSupported(t)) return t;
+    }
+  }
+  if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) return 'video/webm;codecs=vp9';
+  if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8')) return 'video/webm;codecs=vp8';
+  return 'video/webm';
+}
+
+function recordVideo(frames, fps, mimeType) {
+  return new Promise((resolve, reject) => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     const img = new Image();
@@ -998,13 +1013,14 @@ function recordVideoAsWebM(frames, fps) {
       canvas.width = img.width;
       canvas.height = img.height;
       const stream = canvas.captureStream(fps);
-      const recorder = new MediaRecorder(stream, {mimeType: 'video/webm;codecs=vp9', videoBitsPerSecond: 5000000});
+      const recorder = new MediaRecorder(stream, {mimeType, videoBitsPerSecond: 5000000});
       const chunks = [];
       recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
       recorder.onstop = () => {
-        const blob = new Blob(chunks, {type: 'video/webm'});
+        const blob = new Blob(chunks, {type: mimeType.split(';')[0]});
         resolve(blob);
       };
+      recorder.onerror = () => reject(new Error('MediaRecorder error'));
       recorder.start();
       let fi = 0;
       const iv = setInterval(() => {
@@ -1026,20 +1042,15 @@ function recordVideoAsWebM(frames, fps) {
   });
 }
 
-async function convertToMp4(webmBlob) {
-  try {
-    const { createFFmpeg, fetchFile } = FFmpeg;
-    const ffmpeg = createFFmpeg({log: false});
-    await ffmpeg.load();
-    ffmpeg.FS('writeFile', 'input.webm', await fetchFile(webmBlob));
-    await ffmpeg.run('-i', 'input.webm', '-c:v', 'libx264', '-preset', 'fast', '-crf', '23', 'output.mp4');
-    const data = ffmpeg.FS('readFile', 'output.mp4');
-    return new Blob([data.buffer], {type: 'video/mp4'});
-  } catch (e) {
-    console.error('MP4 conversion failed:', e);
-    alert('MP4 conversion requires a server or ffmpeg.wasm CORS headers. Downloading WebM instead.');
-    return null;
-  }
+function recordVideoAsWebM(frames, fps) {
+  return recordVideo(frames, fps, getSupportedMimeType(false));
+}
+
+async function recordVideoAsMp4(frames, fps) {
+  const mimeType = getSupportedMimeType(true);
+  const isMp4 = mimeType.startsWith('video/mp4');
+  const blob = await recordVideo(frames, fps, mimeType);
+  return {blob, isMp4};
 }
 
 id$('g-dl-webm').addEventListener('click', async () => {
@@ -1054,13 +1065,13 @@ id$('g-dl-webm').addEventListener('click', async () => {
 
 id$('g-dl-mp4').addEventListener('click', async () => {
   const btn = id$('g-dl-mp4');
-  btn.disabled = true; btn.textContent = 'Converting to MP4...';
+  btn.disabled = true; btn.textContent = 'Recording MP4...';
   const frames = await captureAllFrames();
   const fps = parseInt(val('g-fps')) || 10;
-  const webmBlob = await recordVideoAsWebM(frames, fps);
-  const mp4Blob = await convertToMp4(webmBlob);
-  if (mp4Blob) saveAs(mp4Blob, `${val('g-algo')}_${val('g-problem')}_animation.mp4`);
-  else saveAs(webmBlob, `${val('g-algo')}_${val('g-problem')}_animation.webm`);
+  const {blob, isMp4} = await recordVideoAsMp4(frames, fps);
+  const ext = isMp4 ? 'mp4' : 'webm';
+  if (!isMp4) alert('MP4 not supported in this browser. Downloading WebM instead.');
+  saveAs(blob, `${val('g-algo')}_${val('g-problem')}_animation.${ext}`);
   btn.disabled = false; btn.textContent = 'Download Video (MP4)';
 });
 
@@ -1320,13 +1331,13 @@ id$('t-dl-webm').addEventListener('click', async () => {
 
 id$('t-dl-mp4').addEventListener('click', async () => {
   const btn = id$('t-dl-mp4');
-  btn.disabled = true; btn.textContent = 'Converting to MP4...';
+  btn.disabled = true; btn.textContent = 'Recording MP4...';
   const frames = await tCaptureAllFrames();
   const fps = parseInt(val('t-fps')) || 10;
-  const webmBlob = await recordVideoAsWebM(frames, fps);
-  const mp4Blob = await convertToMp4(webmBlob);
-  if (mp4Blob) saveAs(mp4Blob, 'trajectory_animation.mp4');
-  else saveAs(webmBlob, 'trajectory_animation.webm');
+  const {blob, isMp4} = await recordVideoAsMp4(frames, fps);
+  const ext = isMp4 ? 'mp4' : 'webm';
+  if (!isMp4) alert('MP4 not supported in this browser. Downloading WebM instead.');
+  saveAs(blob, `trajectory_animation.${ext}`);
   btn.disabled = false; btn.textContent = 'Download Video (MP4)';
 });
 
@@ -1574,13 +1585,13 @@ id$('c-dl-webm').addEventListener('click', async () => {
 
 id$('c-dl-mp4').addEventListener('click', async () => {
   const btn = id$('c-dl-mp4');
-  btn.disabled = true; btn.textContent = 'Converting to MP4...';
+  btn.disabled = true; btn.textContent = 'Recording MP4...';
   const frames = await cCaptureAllFrames();
-  const fps = parseInt(val('c-fps')) || 5;
-  const webmBlob = await recordVideoAsWebM(frames, fps);
-  const mp4Blob = await convertToMp4(webmBlob);
-  if (mp4Blob) saveAs(mp4Blob, `genetic_${val('c-problem')}_animation.mp4`);
-  else saveAs(webmBlob, `genetic_${val('c-problem')}_animation.webm`);
+  const fps = parseInt(val('c-fps') || '5');
+  const {blob, isMp4} = await recordVideoAsMp4(frames, fps);
+  const ext = isMp4 ? 'mp4' : 'webm';
+  if (!isMp4) alert('MP4 not supported in this browser. Downloading WebM instead.');
+  saveAs(blob, `genetic_${val('c-problem')}_animation.${ext}`);
   btn.disabled = false; btn.textContent = 'Download Video (MP4)';
 });
 
