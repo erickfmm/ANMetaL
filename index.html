@@ -49,6 +49,14 @@ body { font-family: 'Inter', system-ui, sans-serif; }
 .toggle-slider::before { content: ''; position: absolute; height: 16px; width: 16px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: .3s; }
 .toggle-switch input:checked + .toggle-slider { background: #3b82f6; }
 .toggle-switch input:checked + .toggle-slider::before { transform: translateX(18px); }
+.accordion-header { display: flex; align-items: center; justify-content: space-between; padding: 4px 6px; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 4px; cursor: pointer; font-size: 0.75rem; font-weight: 600; color: #374151; user-select: none; }
+.accordion-header:hover { background: #e5e7eb; }
+.accordion-header .arrow { transition: transform 0.2s; font-size: 0.6rem; }
+.accordion-header.open .arrow { transform: rotate(180deg); }
+.accordion-body { display: none; padding: 6px 4px 2px; border: 1px solid #d1d5db; border-top: none; border-radius: 0 0 4px 4px; background: #fff; }
+.accordion-body.open { display: block; }
+.accordion-body .acc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.accordion-disabled { opacity: 0.4; pointer-events: none; }
 </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
@@ -176,6 +184,7 @@ body { font-family: 'Inter', system-ui, sans-serif; }
       <div class="ctrl-section">
         <span class="ctrl-label">Algorithms (multi-select)</span>
         <div id="t-algos" class="algo-checks"></div>
+        <div id="t-algo-accordions" class="mt-2 flex flex-col gap-1"></div>
       </div>
       <div class="ctrl-section">
         <span class="ctrl-label">Problem</span>
@@ -419,14 +428,55 @@ id$('g-heatmap-toggle').addEventListener('change', () => {
   id$('g-heatmap-opts').style.display = id$('g-heatmap-toggle').checked ? 'flex' : 'none';
 });
 
-// ---- TAB 2: build algo checkboxes ----
+// ---- TAB 2: build algo checkboxes + accordions ----
 (function(){
   const wrap = id$('t-algos');
+  const accWrap = id$('t-algo-accordions');
   const defaults = ['PSO','ABC','ACO','Bat','Firefly','Harmony'];
   ALGO_LIST.forEach(a => {
     const lbl = document.createElement('label');
     lbl.innerHTML = `<input type="checkbox" class="t-algo-cb" value="${a}" ${defaults.includes(a)?'checked':''}> ${a}`;
     wrap.appendChild(lbl);
+
+    const params = ALGO_PARAMS[a] || [];
+    const wrapper = document.createElement('div');
+    wrapper.id = `t-acc-wrap-${a}`;
+    const isChecked = defaults.includes(a);
+    wrapper.className = isChecked ? '' : 'accordion-disabled';
+
+    const header = document.createElement('div');
+    header.className = 'accordion-header';
+    header.innerHTML = `<span>${a}</span><span class="arrow">&#9660;</span>`;
+    header.addEventListener('click', () => {
+      header.classList.toggle('open');
+      body.classList.toggle('open');
+    });
+
+    const body = document.createElement('div');
+    body.className = 'accordion-body';
+    if (params.length === 0) {
+      body.innerHTML = '<span class="ctrl-label" style="text-align:center;color:#9ca3af;">No tunable parameters</span>';
+    } else {
+      const grid = document.createElement('div');
+      grid.className = 'acc-grid';
+      params.forEach(p => {
+        const cell = document.createElement('div');
+        cell.innerHTML = `<span class="ctrl-label">${p.label}</span><input id="tp-${a}-${p.id}" type="number" class="ctrl-input" value="${p.def}" step="${p.type==='float'?'0.01':'1'}">`;
+        grid.appendChild(cell);
+      });
+      body.appendChild(grid);
+    }
+
+    wrapper.appendChild(header);
+    wrapper.appendChild(body);
+    accWrap.appendChild(wrapper);
+  });
+
+  wrap.addEventListener('change', e => {
+    if (e.target.classList.contains('t-algo-cb')) {
+      const w = id$(`t-acc-wrap-${e.target.value}`);
+      if (w) w.classList.toggle('accordion-disabled', !e.target.checked);
+    }
   });
 })();
 
@@ -1008,6 +1058,16 @@ function tBuildRunParams(algo) {
   return {seed, iters, pop, ndims, problem, algo};
 }
 
+function tGetAlgoParams(algo) {
+  const params = ALGO_PARAMS[algo] || [];
+  const result = {};
+  params.forEach(p => {
+    const el = id$(`tp-${algo}-${p.id}`);
+    result[p.id] = el ? parseFloat(el.value) : p.def;
+  });
+  return result;
+}
+
 function tRunOne(algo) {
   const {seed, iters, pop, ndims, problem} = tBuildRunParams(algo);
   const probInst = problem === 'partition' ? new A.PartitionReal(seed, ndims) : new A.SubsetReal(seed, ndims);
@@ -1017,21 +1077,8 @@ function tRunOne(algo) {
 
   const iterations = [];
   const fitnesses = [];
-  const defaults = {
-    AFSA: {stagnationVariation:0.2,itsStagnation:5,leapPercentage:0.5,velocityPercentage:0.3,nPointsToChoose:1,crowdedPercentage:0.9,visualDistancePercentage:0.1},
-    PSO: {omega:0.5,phiP:1,phiG:1},
-    PSOWL: {omega:0.5,phiP:1,phiG:1,stagnationVariation:0.2,itsStagnation:5,leapPercentage:0.5},
-    Greedy: {},
-    GreedyWL: {stagnationVariation:0.2,itsStagnation:5,leapPercentage:0.5},
-    ABC: {limit:20},
-    ACO: {evaporation_rate:0.1,alpha:1.0,beta:2.0},
-    Bat: {fmin:0,fmax:2,A:0.5,r0:0.5},
-    Blackhole: {},
-    Cuckoo: {pa:0.25},
-    Firefly: {alpha:0.5,beta0:1.0,gamma:1.0},
-    Harmony: {hmcr:0.9,par:0.3,bw:0.2}
-  };
-  const gen = gDispatchRunYielded(mh, algo, iters, pop, seed, defaults[algo] || {});
+  const algoParams = tGetAlgoParams(algo);
+  const gen = gDispatchRunYielded(mh, algo, iters, pop, seed, algoParams);
   for (const r of gen) {
     iterations.push(r.iteration);
     fitnesses.push(r.bestFitness);
