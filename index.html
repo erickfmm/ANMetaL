@@ -57,6 +57,15 @@ body { font-family: 'Inter', system-ui, sans-serif; }
 .accordion-body.open { display: block; }
 .accordion-body .acc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
 .accordion-disabled { opacity: 0.4; pointer-events: none; }
+@media (max-width: 768px) {
+  .tab-panel.active { flex-direction: column !important; }
+  .tab-panel aside { width: 100% !important; max-height: none !important; flex-shrink: 1 !important; }
+  .chart-area.grid { grid-template-columns: 1fr !important; }
+  #tab-genetic .flex.gap-4 { flex-direction: column !important; }
+  #tab-genetic .flex.gap-4 > div:last-child { width: 100% !important; }
+  header h1 { font-size: 1.25rem; }
+  .ctrl-section.grid.grid-cols-2 { grid-template-columns: 1fr; }
+}
 </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
@@ -143,10 +152,11 @@ body { font-family: 'Inter', system-ui, sans-serif; }
         <div id="g-heatmap-opts" style="display:none" class="flex flex-col gap-1">
           <div><span class="ctrl-label">Brush Size (data units)</span><input id="g-heatmap-brush" type="number" class="ctrl-input" value="0.5" step="0.05" min="0.01"></div>
           <div class="flex gap-2">
-            <div class="flex-1"><span class="ctrl-label">Worst Color</span><input id="g-heatmap-cstart" type="color" value="#0000ff" class="ctrl-input" style="height:28px;padding:1px 2px;"></div>
-            <div class="flex-1"><span class="ctrl-label">Best Color</span><input id="g-heatmap-cend" type="color" value="#ff0000" class="ctrl-input" style="height:28px;padding:1px 2px;"></div>
+            <div class="flex-1"><span class="ctrl-label">Low Color</span><input id="g-heatmap-cstart" type="color" value="#0000ff" class="ctrl-input" style="height:28px;padding:1px 2px;"></div>
+            <div class="flex-1"><span class="ctrl-label">High Color</span><input id="g-heatmap-cend" type="color" value="#ff0000" class="ctrl-input" style="height:28px;padding:1px 2px;"></div>
           </div>
           <div><span class="ctrl-label">Opacity</span><input id="g-heatmap-opacity" type="number" class="ctrl-input" value="0.4" step="0.05" min="0.05" max="1"></div>
+          <div><span class="ctrl-label">Gradient Slope <span id="g-heatmap-slope-val">0.50</span></span><input id="g-heatmap-slope" type="range" min="0.05" max="0.95" step="0.05" value="0.5" class="ctrl-input" style="padding:0"></div>
         </div>
       </div>
       <div id="g-algo-params" class="ctrl-section"></div>
@@ -428,6 +438,10 @@ id$('g-heatmap-toggle').addEventListener('change', () => {
   id$('g-heatmap-opts').style.display = id$('g-heatmap-toggle').checked ? 'flex' : 'none';
 });
 
+id$('g-heatmap-slope').addEventListener('input', () => {
+  id$('g-heatmap-slope-val').textContent = parseFloat(id$('g-heatmap-slope').value).toFixed(2);
+});
+
 // ---- TAB 2: build algo checkboxes + accordions ----
 (function(){
   const wrap = id$('t-algos');
@@ -652,6 +666,8 @@ function render2D(idx, limits, traces, algo, prob) {
     const cStart = hexToRgb(id$('g-heatmap-cstart').value);
     const cEnd = hexToRgb(id$('g-heatmap-cend').value);
     const hmOpacity = parseFloat(id$('g-heatmap-opacity').value) || 0.4;
+    const slope = parseFloat(id$('g-heatmap-slope').value) || 0.5;
+    const slopeExp = Math.log(0.5) / Math.log(Math.max(0.01, Math.min(0.99, slope)));
 
     const allFits = gHistory.flatMap(h => h.fitnesses);
     const fMin = Math.min(...allFits);
@@ -668,7 +684,8 @@ function render2D(idx, limits, traces, algo, prob) {
       for (let pi = 0; pi < hd.points.length; pi++) {
         const fit = hd.fitnesses[pi];
         const t = (fit - fMin) / fRange;
-        const rgb = lerpColor(cStart, cEnd, t);
+        const tAdj = Math.pow(Math.max(0, Math.min(1, t)), slopeExp);
+        const rgb = lerpColor(cStart, cEnd, tAdj);
         heatPts.push({x: hd.points[pi][0], y: hd.points[pi][1], rgb});
       }
     }
@@ -798,6 +815,8 @@ function render3D(idx, limits, traces) {
     const cEnd = hexToRgb(id$('g-heatmap-cend').value);
     const brushSize = parseFloat(id$('g-heatmap-brush').value) || 0.5;
     const hmOpacity = parseFloat(id$('g-heatmap-opacity').value) || 0.4;
+    const slope = parseFloat(id$('g-heatmap-slope').value) || 0.5;
+    const slopeExp = Math.log(0.5) / Math.log(Math.max(0.01, Math.min(0.99, slope)));
     const xRange = limits.max[0] - limits.min[0];
     const yRange = limits.max[1] - limits.min[1];
     const brushScale = (brushSize / Math.max(xRange, yRange)) * scale;
@@ -812,7 +831,8 @@ function render3D(idx, limits, traces) {
       for (let pi = 0; pi < hd.points.length; pi++) {
         const fit = hd.fitnesses[pi];
         const t = (fit - fMin3) / fRange3;
-        const rgb = lerpColor(cStart, cEnd, t);
+        const tAdj = Math.pow(Math.max(0, Math.min(1, t)), slopeExp);
+        const rgb = lerpColor(cStart, cEnd, tAdj);
         const hpx = ((hd.points[pi][0] - limits.min[0]) / xRange - 0.5) * scale;
         const hpy = ((hd.points[pi][1] - limits.min[1]) / yRange - 0.5) * scale;
 
