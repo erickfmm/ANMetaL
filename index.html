@@ -1,0 +1,1378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ANMetaL Visualizer</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3/dist/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/file-saver@2/dist/FileSaver.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/ffmpeg.wasm@0.12/dist/ffmpeg.min.js"></script>
+<script src="anmetal.min.js"></script>
+<style>
+body { font-family: 'Inter', system-ui, sans-serif; }
+.tab-btn.active { border-bottom: 3px solid #3b82f6; color: #3b82f6; font-weight: 700; }
+.tab-panel { display: none; }
+.tab-panel.active { display: flex; }
+.ctrl-section { border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; margin-bottom: 8px; }
+.ctrl-section:last-child { border-bottom: none; }
+.ctrl-label { font-size: 0.75rem; color: #6b7280; display: block; margin-bottom: 2px; }
+.ctrl-input { width: 100%; padding: 4px 6px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.8rem; }
+.ctrl-select { width: 100%; padding: 4px 6px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.8rem; background: white; }
+.slider-container { width: 100%; }
+.slider-container input[type="range"] { width: 100%; }
+.btn { padding: 6px 14px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; border: none; }
+.btn-primary { background: #3b82f6; color: white; }
+.btn-primary:hover { background: #2563eb; }
+.btn-success { background: #10b981; color: white; }
+.btn-success:hover { background: #059669; }
+.btn-warning { background: #f59e0b; color: white; }
+.btn-warning:hover { background: #d97706; }
+.btn-danger { background: #ef4444; color: white; }
+.btn-danger:hover { background: #dc2626; }
+.btn-secondary { background: #6b7280; color: white; }
+.btn-secondary:hover { background: #4b5563; }
+.chart-area { position: relative; min-height: 500px; }
+#chart3d-container { width: 100%; height: 500px; }
+#chart3d-container canvas { width: 100% !important; height: 100% !important; }
+.algo-checks { display: flex; flex-wrap: wrap; gap: 4px; }
+.algo-checks label { font-size: 0.75rem; display: flex; align-items: center; gap: 2px; }
+.progress-bar { height: 4px; background: #e5e7eb; border-radius: 2px; overflow: hidden; }
+.progress-bar .fill { height: 100%; background: #3b82f6; transition: width 0.1s; }
+.cat-grid { display: grid; gap: 1px; font-size: 0.6rem; line-height: 1; }
+.cat-cell { display: flex; align-items: center; justify-content: center; border: 1px solid #d1d5db; min-width: 22px; min-height: 18px; }
+</style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+<div class="max-w-full mx-auto p-4">
+  <header class="mb-4">
+    <h1 class="text-2xl font-bold text-gray-800">ANMetaL Visualizer</h1>
+    <p class="text-sm text-gray-500">Metaheuristic Optimization Algorithm Visualization</p>
+  </header>
+
+  <nav class="flex border-b border-gray-200 mb-4">
+    <button class="tab-btn active px-4 py-2 text-sm" data-tab="tab-graph">MH Graph Each It</button>
+    <button class="tab-btn px-4 py-2 text-sm" data-tab="tab-trajectory">Trajectory Plot NPComp</button>
+    <button class="tab-btn px-4 py-2 text-sm" data-tab="tab-genetic">Genetic Categorical Plot</button>
+  </nav>
+
+  <!-- TAB 1: MH Graph Each Iteration -->
+  <div id="tab-graph" class="tab-panel active flex gap-4">
+    <aside class="w-72 flex-shrink-0 bg-white rounded-lg shadow p-4 overflow-y-auto" style="max-height:85vh">
+      <div class="ctrl-section">
+        <span class="ctrl-label">Algorithm</span>
+        <select id="g-algo" class="ctrl-select">
+          <option value="AFSA">AFSA</option>
+          <option value="PSO">PSO</option>
+          <option value="PSOWL">PSO With Leap</option>
+          <option value="Greedy">Greedy</option>
+          <option value="GreedyWL">Greedy With Leap</option>
+          <option value="ABC" selected>ABC</option>
+          <option value="ACO">ACO</option>
+          <option value="Bat">Bat</option>
+          <option value="Blackhole">Blackhole</option>
+          <option value="Cuckoo">Cuckoo</option>
+          <option value="Firefly">Firefly</option>
+          <option value="Harmony">Harmony</option>
+        </select>
+      </div>
+      <div class="ctrl-section">
+        <span class="ctrl-label">Problem</span>
+        <select id="g-problem" class="ctrl-select">
+          <option value="Camelback">Camelback</option>
+          <option value="Goldsteinprice" selected>Goldsteinprice</option>
+          <option value="Pshubert1">Pshubert1</option>
+          <option value="Pshubert2">Pshubert2</option>
+          <option value="Shubert">Shubert</option>
+          <option value="Quartic">Quartic</option>
+        </select>
+      </div>
+      <div class="ctrl-section">
+        <span class="ctrl-label">Plot Type</span>
+        <select id="g-plottype" class="ctrl-select">
+          <option value="2d">2D</option>
+          <option value="3d">3D</option>
+        </select>
+      </div>
+      <div class="ctrl-section">
+        <span class="ctrl-label">Traces</span>
+        <select id="g-traces" class="ctrl-select">
+          <option value="none">None</option>
+          <option value="all">All</option>
+          <option value="smooth">Smooth</option>
+        </select>
+      </div>
+      <div class="ctrl-section grid grid-cols-2 gap-2">
+        <div><span class="ctrl-label">Seed</span><input id="g-seed" type="number" class="ctrl-input" value="0"></div>
+        <div><span class="ctrl-label">Iterations</span><input id="g-iters" type="number" class="ctrl-input" value="50"></div>
+        <div><span class="ctrl-label">Population</span><input id="g-pop" type="number" class="ctrl-input" value="30"></div>
+        <div><span class="ctrl-label">FPS</span><input id="g-fps" type="number" class="ctrl-input" value="10" min="1" max="60"></div>
+      </div>
+      <div class="ctrl-section">
+        <span class="ctrl-label">Image Format</span>
+        <select id="g-format" class="ctrl-select">
+          <option value="png">PNG (raster)</option>
+          <option value="svg">SVG (vector)</option>
+        </select>
+      </div>
+      <div id="g-algo-params" class="ctrl-section"></div>
+      <div class="ctrl-section flex flex-col gap-2">
+        <button id="g-run" class="btn btn-primary w-full">Run Optimization</button>
+        <div class="flex gap-2">
+          <button id="g-play" class="btn btn-success flex-1" disabled>&#9654; Play</button>
+          <button id="g-stop" class="btn btn-danger flex-1" disabled>&#9632; Stop</button>
+        </div>
+        <div class="slider-container">
+          <input id="g-slider" type="range" min="0" max="0" value="0" disabled>
+          <div class="flex justify-between text-xs text-gray-500"><span id="g-slider-label">0 / 0</span></div>
+        </div>
+        <div class="progress-bar"><div id="g-progress" class="fill" style="width:0%"></div></div>
+      </div>
+      <div class="ctrl-section flex flex-col gap-2">
+        <span class="ctrl-label font-semibold">Export</span>
+        <button id="g-dl-zip" class="btn btn-secondary w-full" disabled>Download ZIP (Images)</button>
+        <button id="g-dl-webm" class="btn btn-secondary w-full" disabled>Download Video (WebM)</button>
+        <button id="g-dl-mp4" class="btn btn-secondary w-full" disabled>Download Video (MP4)</button>
+      </div>
+    </aside>
+    <main class="flex-1 bg-white rounded-lg shadow p-4">
+      <div class="chart-area">
+        <canvas id="g-chart2d"></canvas>
+        <div id="chart3d-container" style="display:none"></div>
+      </div>
+      <div id="g-info" class="mt-2 text-xs text-gray-500"></div>
+    </main>
+  </div>
+
+  <!-- TAB 2: Trajectory Plot NPComp -->
+  <div id="tab-trajectory" class="tab-panel flex gap-4">
+    <aside class="w-72 flex-shrink-0 bg-white rounded-lg shadow p-4 overflow-y-auto" style="max-height:85vh">
+      <div class="ctrl-section">
+        <span class="ctrl-label">Algorithms (multi-select)</span>
+        <div id="t-algos" class="algo-checks"></div>
+      </div>
+      <div class="ctrl-section">
+        <span class="ctrl-label">Problem</span>
+        <select id="t-problem" class="ctrl-select">
+          <option value="partition">Partition Sum</option>
+          <option value="subset">Subset Sum</option>
+        </select>
+      </div>
+      <div class="ctrl-section grid grid-cols-2 gap-2">
+        <div><span class="ctrl-label">Seed</span><input id="t-seed" type="number" class="ctrl-input" value="115"></div>
+        <div><span class="ctrl-label">Dimensions</span><input id="t-ndims" type="number" class="ctrl-input" value="500" min="10"></div>
+        <div><span class="ctrl-label">Iterations</span><input id="t-iters" type="number" class="ctrl-input" value="50"></div>
+        <div><span class="ctrl-label">Population</span><input id="t-pop" type="number" class="ctrl-input" value="20"></div>
+        <div><span class="ctrl-label">FPS</span><input id="t-fps" type="number" class="ctrl-input" value="10" min="1" max="60"></div>
+      </div>
+      <div class="ctrl-section">
+        <span class="ctrl-label">Image Format</span>
+        <select id="t-format" class="ctrl-select">
+          <option value="png">PNG</option>
+          <option value="svg">SVG</option>
+        </select>
+      </div>
+      <div class="ctrl-section flex flex-col gap-2">
+        <button id="t-run" class="btn btn-primary w-full">Run Optimization</button>
+        <div class="flex gap-2">
+          <button id="t-play" class="btn btn-success flex-1" disabled>&#9654; Play</button>
+          <button id="t-stop" class="btn btn-danger flex-1" disabled>&#9632; Stop</button>
+        </div>
+        <div class="slider-container">
+          <input id="t-slider" type="range" min="0" max="0" value="0" disabled>
+          <div class="flex justify-between text-xs text-gray-500"><span id="t-slider-label">0 / 0</span></div>
+        </div>
+        <div class="progress-bar"><div id="t-progress" class="fill" style="width:0%"></div></div>
+      </div>
+      <div class="ctrl-section flex flex-col gap-2">
+        <span class="ctrl-label font-semibold">Export</span>
+        <button id="t-dl-zip" class="btn btn-secondary w-full" disabled>Download ZIP (Images)</button>
+        <button id="t-dl-webm" class="btn btn-secondary w-full" disabled>Download Video (WebM)</button>
+        <button id="t-dl-mp4" class="btn btn-secondary w-full" disabled>Download Video (MP4)</button>
+      </div>
+    </aside>
+    <main class="flex-1 bg-white rounded-lg shadow p-4">
+      <div class="chart-area grid grid-cols-2 gap-4">
+        <div><canvas id="t-chart1"></canvas></div>
+        <div><canvas id="t-chart2"></canvas></div>
+        <div><canvas id="t-chart3"></canvas></div>
+        <div><canvas id="t-chart4"></canvas></div>
+      </div>
+      <div id="t-info" class="mt-2 text-xs text-gray-500"></div>
+    </main>
+  </div>
+
+  <!-- TAB 3: Genetic Categorical Plot -->
+  <div id="tab-genetic" class="tab-panel flex gap-4">
+    <aside class="w-72 flex-shrink-0 bg-white rounded-lg shadow p-4 overflow-y-auto" style="max-height:85vh">
+      <div class="ctrl-section">
+        <span class="ctrl-label">Problem</span>
+        <select id="c-problem" class="ctrl-select">
+          <option value="knapsack">Knapsack</option>
+          <option value="sudoku">Sudoku</option>
+          <option value="sudoku_opt">Sudoku Optimized</option>
+        </select>
+      </div>
+      <div class="ctrl-section">
+        <span class="ctrl-label">Category Visualization</span>
+        <select id="c-cattype" class="ctrl-select">
+          <option value="character">Character</option>
+          <option value="color">Color</option>
+          <option value="number">Number</option>
+          <option value="value">Value</option>
+          <option value="colorvalue">Color + Value</option>
+        </select>
+      </div>
+      <div class="ctrl-section grid grid-cols-2 gap-2">
+        <div><span class="ctrl-label">Seed</span><input id="c-seed" type="number" class="ctrl-input" value="0"></div>
+        <div><span class="ctrl-label">Iterations</span><input id="c-iters" type="number" class="ctrl-input" value="50"></div>
+        <div><span class="ctrl-label">Population</span><input id="c-pop" type="number" class="ctrl-input" value="20"></div>
+        <div><span class="ctrl-label">Dimensions</span><input id="c-dims" type="number" class="ctrl-input" value="20"></div>
+        <div><span class="ctrl-label">Elitist %</span><input id="c-elitist" type="number" class="ctrl-input" value="0.3" step="0.05" min="0" max="1"></div>
+        <div><span class="ctrl-label">Mutability</span><input id="c-mut" type="number" class="ctrl-input" value="0.1" step="0.01" min="0" max="1"></div>
+        <div><span class="ctrl-label">Fidelity</span>
+          <select id="c-fidelity" class="ctrl-select"><option value="1">True</option><option value="0">False</option></select>
+        </div>
+        <div><span class="ctrl-label">Parent Mut.</span>
+          <select id="c-pmut" class="ctrl-select"><option value="1">True</option><option value="0">False</option></select>
+        </div>
+        <div><span class="ctrl-label">Use Leap</span>
+          <select id="c-leap" class="ctrl-select"><option value="0">False</option><option value="1">True</option></select>
+        </div>
+        <div><span class="ctrl-label">FPS</span><input id="c-fps" type="number" class="ctrl-input" value="5" min="1" max="60"></div>
+      </div>
+      <div class="ctrl-section">
+        <span class="ctrl-label">Image Format</span>
+        <select id="c-format" class="ctrl-select">
+          <option value="png">PNG</option>
+          <option value="svg">SVG</option>
+        </select>
+      </div>
+      <div class="ctrl-section flex flex-col gap-2">
+        <button id="c-run" class="btn btn-primary w-full">Run Optimization</button>
+        <div class="flex gap-2">
+          <button id="c-play" class="btn btn-success flex-1" disabled>&#9654; Play</button>
+          <button id="c-stop" class="btn btn-danger flex-1" disabled>&#9632; Stop</button>
+        </div>
+        <div class="slider-container">
+          <input id="c-slider" type="range" min="0" max="0" value="0" disabled>
+          <div class="flex justify-between text-xs text-gray-500"><span id="c-slider-label">0 / 0</span></div>
+        </div>
+      </div>
+      <div class="ctrl-section flex flex-col gap-2">
+        <span class="ctrl-label font-semibold">Export</span>
+        <button id="c-dl-zip" class="btn btn-secondary w-full" disabled>Download ZIP (Images)</button>
+        <button id="c-dl-webm" class="btn btn-secondary w-full" disabled>Download Video (WebM)</button>
+        <button id="c-dl-mp4" class="btn btn-secondary w-full" disabled>Download Video (MP4)</button>
+      </div>
+    </aside>
+    <main class="flex-1 bg-white rounded-lg shadow p-4">
+      <div class="chart-area">
+        <div class="flex gap-4">
+          <div id="c-pop-grid-wrap" class="flex-1 overflow-auto" style="max-height:600px">
+            <canvas id="c-canvas"></canvas>
+          </div>
+          <div style="width:250px"><canvas id="c-chart"></canvas></div>
+        </div>
+      </div>
+      <div id="c-info" class="mt-2 text-xs text-gray-500"></div>
+    </main>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+const A = window.ANMetaL;
+
+const ALGO_LIST = ['AFSA','PSO','PSOWL','Greedy','GreedyWL','ABC','ACO','Bat','Blackhole','Cuckoo','Firefly','Harmony'];
+const PROB_2D = {Camelback:A.Camelback, Goldsteinprice:A.Goldsteinprice, Pshubert1:A.Pshubert1, Pshubert2:A.Pshubert2, Shubert:A.Shubert, Quartic:A.Quartic2D};
+
+const ALGO_CLASSES = {
+  AFSA: A.AFSAMH_Real, PSO: A.PSOMH_Real, PSOWL: A.PSOMH_Real_WithLeap,
+  Greedy: A.GreedyMH_Real, GreedyWL: A.GreedyMH_Real_WithLeap,
+  ABC: A.ArtificialBeeColony, ACO: A.AntColony, Bat: A.BatAlgorithm,
+  Blackhole: A.BlackHole, Cuckoo: A.CuckooSearch, Firefly: A.FireflyAlgorithm,
+  Harmony: A.HarmonySearch
+};
+
+const ALGO_PARAMS = {
+  AFSA: [
+    {id:'visualDistancePercentage',label:'Visual Dist %',type:'float',def:0.2},
+    {id:'velocityPercentage',label:'Velocity %',type:'float',def:0.3},
+    {id:'nPointsToChoose',label:'Points to Choose',type:'int',def:5},
+    {id:'crowdedPercentage',label:'Crowded %',type:'float',def:0.8},
+    {id:'itsStagnation',label:'Stagnation Its',type:'int',def:7},
+    {id:'leapPercentage',label:'Leap %',type:'float',def:0.2},
+    {id:'stagnationVariation',label:'Stagnation Var',type:'float',def:0.4}
+  ],
+  PSO: [
+    {id:'omega',label:'Omega',type:'float',def:0.5},
+    {id:'phiP',label:'Phi P',type:'float',def:2.0},
+    {id:'phiG',label:'Phi G',type:'float',def:1.0}
+  ],
+  PSOWL: [
+    {id:'omega',label:'Omega',type:'float',def:0.5},
+    {id:'phiP',label:'Phi P',type:'float',def:2.0},
+    {id:'phiG',label:'Phi G',type:'float',def:1.0},
+    {id:'stagnationVariation',label:'Stagnation Var',type:'float',def:0.4},
+    {id:'itsStagnation',label:'Stagnation Its',type:'int',def:5},
+    {id:'leapPercentage',label:'Leap %',type:'float',def:0.8}
+  ],
+  Greedy: [],
+  GreedyWL: [
+    {id:'stagnationVariation',label:'Stagnation Var',type:'float',def:0.4},
+    {id:'itsStagnation',label:'Stagnation Its',type:'int',def:5},
+    {id:'leapPercentage',label:'Leap %',type:'float',def:0.8}
+  ],
+  ABC: [{id:'limit',label:'Limit',type:'int',def:20}],
+  ACO: [
+    {id:'evaporation_rate',label:'Evaporation Rate',type:'float',def:0.1},
+    {id:'alpha',label:'Alpha',type:'float',def:1.0},
+    {id:'beta',label:'Beta',type:'float',def:2.0}
+  ],
+  Bat: [
+    {id:'fmin',label:'F Min',type:'float',def:0.0},
+    {id:'fmax',label:'F Max',type:'float',def:2.0},
+    {id:'A',label:'Loudness',type:'float',def:0.9},
+    {id:'r0',label:'Pulse Rate',type:'float',def:0.9}
+  ],
+  Blackhole: [],
+  Cuckoo: [{id:'pa',label:'Abandon Prob',type:'float',def:0.25}],
+  Firefly: [
+    {id:'alpha',label:'Alpha',type:'float',def:0.5},
+    {id:'beta0',label:'Beta0',type:'float',def:1.0},
+    {id:'gamma',label:'Gamma',type:'float',def:1.0}
+  ],
+  Harmony: [
+    {id:'hmcr',label:'HMCR',type:'float',def:0.9},
+    {id:'par',label:'PAR',type:'float',def:0.3},
+    {id:'bw',label:'Bandwidth',type:'float',def:0.2}
+  ]
+};
+
+function seededColors(seed, n) {
+  const rng = new A.SeededRandom(seed);
+  const colors = [];
+  for (let i = 0; i < n; i++) {
+    colors.push(`rgb(${Math.floor(rng.next()*156+99)},${Math.floor(rng.next()*156+99)},${Math.floor(rng.next()*156+99)})`);
+  }
+  return colors;
+}
+
+function id$(id) { return document.getElementById(id); }
+function val(id) { const el = id$(id); return el.type === 'number' || el.type === 'range' ? parseFloat(el.value) : el.value; }
+
+// ---- TAB SWITCHING ----
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    id$(btn.dataset.tab).classList.add('active');
+  });
+});
+
+// ---- DYNAMIC ALGO PARAMS (Tab 1) ----
+function buildAlgoParams() {
+  const algo = val('g-algo');
+  const container = id$('g-algo-params');
+  container.innerHTML = '<span class="ctrl-label font-semibold">Algorithm Parameters</span>';
+  const params = ALGO_PARAMS[algo] || [];
+  params.forEach(p => {
+    const div = document.createElement('div');
+    div.className = 'mb-1';
+    div.innerHTML = `<span class="ctrl-label">${p.label}</span><input id="gp-${p.id}" type="number" class="ctrl-input" value="${p.def}" step="${p.type==='float'?'0.01':'1'}">`;
+    container.appendChild(div);
+  });
+}
+id$('g-algo').addEventListener('change', buildAlgoParams);
+buildAlgoParams();
+
+// ---- TAB 2: build algo checkboxes ----
+(function(){
+  const wrap = id$('t-algos');
+  const defaults = ['PSO','ABC','ACO','Bat','Firefly','Harmony'];
+  ALGO_LIST.forEach(a => {
+    const lbl = document.createElement('label');
+    lbl.innerHTML = `<input type="checkbox" class="t-algo-cb" value="${a}" ${defaults.includes(a)?'checked':''}> ${a}`;
+    wrap.appendChild(lbl);
+  });
+})();
+
+// ============================================================
+// TAB 1: MH Graph Each Iteration
+// ============================================================
+let gHistory = [], gChart = null, gThreeScene = null, gPlayInterval = null, gColors = [];
+
+function gGetParams() {
+  const algo = val('g-algo');
+  const params = ALGO_PARAMS[algo] || [];
+  const result = {};
+  params.forEach(p => {
+    const el = id$('gp-' + p.id);
+    result[p.id] = el ? parseFloat(el.value) : p.def;
+  });
+  return result;
+}
+
+function gRenderFrame(idx) {
+  if (idx < 0 || idx >= gHistory.length) return;
+  const d = gHistory[idx];
+  const is3d = val('g-plottype') === '3d';
+  const algo = val('g-algo');
+  const prob = val('g-problem');
+  const traces = val('g-traces');
+  const probClass = PROB_2D[prob];
+  const limits = probClass.getLimits();
+
+  id$('g-slider-label').textContent = `Iteration ${d.iteration} (${idx+1} / ${gHistory.length})`;
+  id$('g-info').textContent = `Best Fitness: ${d.bestFitness.toFixed(6)} | Algorithm: ${algo} | Problem: ${prob}`;
+
+  if (is3d) {
+    id$('g-chart2d').style.display = 'none';
+    id$('chart3d-container').style.display = 'block';
+    render3D(idx, limits, traces);
+  } else {
+    id$('g-chart2d').style.display = 'block';
+    id$('chart3d-container').style.display = 'none';
+    render2D(idx, limits, traces, algo, prob);
+  }
+}
+
+function render2D(idx, limits, traces, algo, prob) {
+  const d = gHistory[idx];
+  const datasets = [];
+
+  for (let i = 0; i < d.points.length; i++) {
+    const color = gColors[i];
+    const ds = {
+      label: `P${i}`,
+      data: [{x: d.points[i][0], y: d.points[i][1]}],
+      backgroundColor: color,
+      borderColor: color,
+      pointRadius: 5,
+      pointStyle: 'star',
+      showLine: false
+    };
+
+    if (traces === 'all') {
+      const tracePts = [];
+      for (let j = 0; j <= idx; j++) {
+        tracePts.push({x: gHistory[j].points[i][0], y: gHistory[j].points[i][1]});
+      }
+      datasets.push({
+        label: `_trace_${i}`,
+        data: tracePts,
+        borderColor: color,
+        borderWidth: 1,
+        pointRadius: 0,
+        showLine: true,
+        borderDash: [],
+        tension: 0
+      });
+    } else if (traces === 'smooth') {
+      const tracePts = [];
+      for (let j = 0; j <= idx; j++) {
+        tracePts.push({x: gHistory[j].points[i][0], y: gHistory[j].points[i][1]});
+      }
+      datasets.push({
+        label: `_trace_${i}`,
+        data: tracePts,
+        borderColor: color,
+        borderWidth: 1.5,
+        pointRadius: 0,
+        showLine: true,
+        tension: 0.4
+      });
+    } else if (idx > 0) {
+      const prev = gHistory[idx - 1].points[i];
+      datasets.push({
+        label: `_line_${i}`,
+        data: [{x: prev[0], y: prev[1]}, {x: d.points[i][0], y: d.points[i][1]}],
+        borderColor: color,
+        borderWidth: 1,
+        pointRadius: 0,
+        showLine: true,
+        borderDash: [4, 4]
+      });
+    }
+
+    datasets.push(ds);
+  }
+
+  if (gChart) gChart.destroy();
+  const ctx = id$('g-chart2d').getContext('2d');
+  gChart = new Chart(ctx, {
+    type: 'scatter',
+    data: {datasets},
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      title: {display: true, text: `${algo} - ${prob} - Iteration ${d.iteration}`, font: {size: 14}},
+      scales: {
+        x: {min: limits.min[0], max: limits.max[0], title: {display: true, text: 'X'}},
+        y: {min: limits.min[1], max: limits.max[1], title: {display: true, text: 'Y'}}
+      },
+      plugins: {legend: {display: false}, tooltip: {enabled: true}}
+    }
+  });
+}
+
+let threeRenderer, threeCamera, threeSceneObj;
+
+function init3D() {
+  const container = id$('chart3d-container');
+  if (threeRenderer) { container.innerHTML = ''; }
+  threeSceneObj = new THREE.Scene();
+  threeSceneObj.background = new THREE.Color(0xf0f0f0);
+  threeCamera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 0.1, 1000);
+  threeCamera.position.set(30, 30, 30);
+  threeCamera.lookAt(0, 0, 0);
+  threeRenderer = new THREE.WebGLRenderer({antialias: true, preserveDrawingBuffer: true});
+  threeRenderer.setSize(container.clientWidth, container.clientHeight);
+  container.appendChild(threeRenderer.domElement);
+
+  const ambLight = new THREE.AmbientLight(0x404040, 2);
+  threeSceneObj.add(ambLight);
+  const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+  dirLight.position.set(10, 20, 10);
+  threeSceneObj.add(dirLight);
+
+  let isDragging = false, prevX, prevY;
+  threeRenderer.domElement.addEventListener('mousedown', e => { isDragging = true; prevX = e.clientX; prevY = e.clientY; });
+  window.addEventListener('mouseup', () => { isDragging = false; });
+  threeRenderer.domElement.addEventListener('mousemove', e => {
+    if (!isDragging) return;
+    const dx = e.clientX - prevX;
+    const dy = e.clientY - prevY;
+    const spherical = new THREE.Spherical().setFromVector3(threeCamera.position);
+    spherical.theta -= dx * 0.01;
+    spherical.phi = Math.max(0.1, Math.min(Math.PI - 0.1, spherical.phi - dy * 0.01));
+    threeCamera.position.setFromSpherical(spherical);
+    threeCamera.lookAt(0, 0, 0);
+    prevX = e.clientX;
+    prevY = e.clientY;
+    threeRenderer.render(threeSceneObj, threeCamera);
+  });
+
+  threeRenderer.domElement.addEventListener('wheel', e => {
+    const spherical = new THREE.Spherical().setFromVector3(threeCamera.position);
+    spherical.radius = Math.max(5, spherical.radius + e.deltaY * 0.05);
+    threeCamera.position.setFromSpherical(spherical);
+    threeCamera.lookAt(0, 0, 0);
+    threeRenderer.render(threeSceneObj, threeCamera);
+    e.preventDefault();
+  }, {passive: false});
+}
+
+function render3D(idx, limits, traces) {
+  if (!threeRenderer) init3D();
+
+  while (threeSceneObj.children.length > 2) {
+    threeSceneObj.remove(threeSceneObj.children[threeSceneObj.children.length - 1]);
+  }
+
+  const d = gHistory[idx];
+  const xRange = limits.max[0] - limits.min[0];
+  const yRange = limits.max[1] - limits.min[1];
+  const allFits = gHistory.flatMap(h => h.fitnesses);
+  const fMin = Math.min(...allFits);
+  const fMax = Math.max(...allFits);
+  const fRange = fMax - fMin || 1;
+
+  const scale = 20;
+
+  for (let i = 0; i < d.points.length; i++) {
+    const color = gColors[i];
+    const r = parseInt(color.match(/\d+/g)[0]);
+    const g = parseInt(color.match(/\d+/g)[1]);
+    const b = parseInt(color.match(/\d+/g)[2]);
+
+    const px = ((d.points[i][0] - limits.min[0]) / xRange - 0.5) * scale;
+    const py = ((d.points[i][1] - limits.min[1]) / yRange - 0.5) * scale;
+    const pz = ((d.fitnesses[i] - fMin) / fRange - 0.5) * scale;
+
+    const geo = new THREE.SphereGeometry(0.3, 8, 8);
+    const mat = new THREE.MeshPhongMaterial({color: new THREE.Color(r/255, g/255, b/255)});
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(px, pz, py);
+    threeSceneObj.add(mesh);
+
+    if (traces !== 'none') {
+      const points = [];
+      const endJ = traces === 'all' ? idx : Math.max(0, idx);
+      const startJ = traces === 'smooth' ? Math.max(0, idx - 10) : 0;
+      for (let j = startJ; j <= endJ; j++) {
+        const hp = gHistory[j].points[i];
+        const hf = gHistory[j].fitnesses[i];
+        points.push(new THREE.Vector3(
+          ((hp[0] - limits.min[0]) / xRange - 0.5) * scale,
+          ((hf - fMin) / fRange - 0.5) * scale,
+          ((hp[1] - limits.min[1]) / yRange - 0.5) * scale
+        ));
+      }
+      if (points.length > 1) {
+        const lineGeo = new THREE.BufferGeometry().setFromPoints(points);
+        const lineMat = new THREE.LineBasicMaterial({color: new THREE.Color(r/255, g/255, b/255), transparent: true, opacity: 0.5});
+        threeSceneObj.add(new THREE.Line(lineGeo, lineMat));
+      }
+    } else if (idx > 0) {
+      const prev = gHistory[idx-1].points[i];
+      const pf = gHistory[idx-1].fitnesses[i];
+      const lineGeo = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(((prev[0]-limits.min[0])/xRange-0.5)*scale, ((pf-fMin)/fRange-0.5)*scale, ((prev[1]-limits.min[1])/yRange-0.5)*scale),
+        new THREE.Vector3(px, pz, py)
+      ]);
+      const lineMat = new THREE.LineBasicMaterial({color: new THREE.Color(r/255, g/255, b/255), transparent: true, opacity: 0.7});
+      threeSceneObj.add(new THREE.Line(lineGeo, lineMat));
+    }
+  }
+
+  const axesHelper = new THREE.AxesHelper(scale);
+  threeSceneObj.add(axesHelper);
+  threeRenderer.render(threeSceneObj, threeCamera);
+}
+
+function gDispatchRunYielded(mh, algo, iters, pop, seed, p) {
+  switch(algo) {
+    case 'AFSA': return mh.runYielded(iters, pop, false, p.stagnationVariation, p.itsStagnation, p.leapPercentage, p.velocityPercentage, p.nPointsToChoose, p.crowdedPercentage, p.visualDistancePercentage, seed);
+    case 'PSO': return mh.runYielded(iters, pop, seed, p.omega, p.phiP, p.phiG);
+    case 'PSOWL': return mh.runYielded(iters, pop, seed, p.omega, p.phiP, p.phiG, p.stagnationVariation, p.itsStagnation, p.leapPercentage);
+    case 'Greedy': return mh.runYielded(iters, pop, seed);
+    case 'GreedyWL': return mh.runYielded(iters, pop, seed, p.stagnationVariation, p.itsStagnation, p.leapPercentage);
+    case 'ABC': return mh.runYielded(iters, pop, p.limit, seed);
+    case 'ACO': return mh.runYielded(iters, pop, p.evaporation_rate, p.alpha, p.beta, seed);
+    case 'Bat': return mh.runYielded(iters, pop, p.fmin, p.fmax, p.A, p.r0, seed);
+    case 'Blackhole': return mh.runYielded(iters, pop, seed);
+    case 'Cuckoo': return mh.runYielded(iters, pop, p.pa, seed);
+    case 'Firefly': return mh.runYielded(iters, pop, p.alpha, p.beta0, p.gamma, seed);
+    case 'Harmony': return mh.runYielded(iters, pop, p.hmcr, p.par, p.bw, seed);
+    default: return mh.runYielded(iters, pop, seed);
+  }
+}
+
+id$('g-run').addEventListener('click', () => {
+  if (gPlayInterval) { clearInterval(gPlayInterval); gPlayInterval = null; }
+  const algo = val('g-algo');
+  const prob = val('g-problem');
+  const seed = parseInt(val('g-seed'));
+  const iters = parseInt(val('g-iters'));
+  const pop = parseInt(val('g-pop'));
+  const algoParams = gGetParams();
+  const probClass = PROB_2D[prob];
+  const limits = probClass.getLimits();
+  const minX = Math.min(limits.min[0], limits.min[1]);
+  const maxX = Math.max(limits.max[0], limits.max[1]);
+
+  id$('g-run').disabled = true;
+  id$('g-run').textContent = 'Running...';
+  id$('g-progress').style.width = '0%';
+
+  setTimeout(() => {
+    try {
+      const Cls = ALGO_CLASSES[algo];
+      const mh = new Cls(minX, maxX, 2, false, (p) => probClass.func(p), (p) => p, (p) => p);
+
+      gHistory = [];
+      const gen = gDispatchRunYielded(mh, algo, iters, pop, seed, algoParams);
+      for (const result of gen) {
+        gHistory.push(result);
+        id$('g-progress').style.width = ((gHistory.length / (iters + 2)) * 100) + '%';
+      }
+
+      gColors = seededColors(seed, pop);
+      id$('g-slider').max = gHistory.length - 1;
+      id$('g-slider').value = 0;
+      id$('g-slider').disabled = false;
+      id$('g-play').disabled = false;
+      id$('g-stop').disabled = false;
+      id$('g-dl-zip').disabled = false;
+      id$('g-dl-webm').disabled = false;
+      id$('g-dl-mp4').disabled = false;
+      gRenderFrame(0);
+    } catch (e) {
+      id$('g-info').textContent = 'Error: ' + e.message;
+      console.error(e);
+    }
+    id$('g-run').disabled = false;
+    id$('g-run').textContent = 'Run Optimization';
+    id$('g-progress').style.width = '100%';
+  }, 50);
+});
+
+id$('g-slider').addEventListener('input', () => {
+  gRenderFrame(parseInt(id$('g-slider').value));
+});
+
+id$('g-play').addEventListener('click', () => {
+  if (gPlayInterval) clearInterval(gPlayInterval);
+  const fps = parseInt(val('g-fps')) || 10;
+  let idx = parseInt(id$('g-slider').value);
+  gPlayInterval = setInterval(() => {
+    idx++;
+    if (idx >= gHistory.length) { idx = 0; }
+    id$('g-slider').value = idx;
+    gRenderFrame(idx);
+  }, 1000 / fps);
+});
+
+id$('g-stop').addEventListener('click', () => {
+  if (gPlayInterval) { clearInterval(gPlayInterval); gPlayInterval = null; }
+});
+
+// ---- TAB 1 EXPORTS ----
+function captureFrame2D() {
+  return new Promise(resolve => {
+    const canvas = id$('g-chart2d');
+    if (canvas.style.display !== 'none' && gChart) {
+      resolve(gChart.toBase64Image());
+    } else {
+      resolve(threeRenderer.domElement.toDataURL('image/png'));
+    }
+  });
+}
+
+async function captureAllFrames() {
+  const is3d = val('g-plottype') === '3d';
+  const frames = [];
+  const origIdx = parseInt(id$('g-slider').value);
+  for (let i = 0; i < gHistory.length; i++) {
+    gRenderFrame(i);
+    await new Promise(r => setTimeout(r, 20));
+    let dataUrl;
+    if (is3d) {
+      dataUrl = threeRenderer.domElement.toDataURL('image/png');
+    } else {
+      dataUrl = gChart.toBase64Image();
+    }
+    frames.push(dataUrl);
+  }
+  gRenderFrame(origIdx);
+  return frames;
+}
+
+id$('g-dl-zip').addEventListener('click', async () => {
+  const btn = id$('g-dl-zip');
+  btn.disabled = true; btn.textContent = 'Generating ZIP...';
+  const frames = await captureAllFrames();
+  const fmt = val('g-format');
+  const zip = new JSZip();
+  const algo = val('g-algo');
+  const prob = val('g-problem');
+  for (let i = 0; i < frames.length; i++) {
+    const ext = fmt === 'svg' ? 'png' : 'png';
+    const base64 = frames[i].split(',')[1];
+    zip.file(`mhgraph_${String(i).padStart(4,'0')}.${ext}`, base64, {base64: true});
+  }
+  const blob = await zip.generateAsync({type: 'blob'});
+  saveAs(blob, `${algo}_${prob}_plots.zip`);
+  btn.disabled = false; btn.textContent = 'Download ZIP (Images)';
+});
+
+function recordVideoAsWebM(frames, fps) {
+  return new Promise(resolve => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    img.onload = () => {
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const stream = canvas.captureStream(fps);
+      const recorder = new MediaRecorder(stream, {mimeType: 'video/webm;codecs=vp9', videoBitsPerSecond: 5000000});
+      const chunks = [];
+      recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+      recorder.onstop = () => {
+        const blob = new Blob(chunks, {type: 'video/webm'});
+        resolve(blob);
+      };
+      recorder.start();
+      let fi = 0;
+      const iv = setInterval(() => {
+        if (fi >= frames.length) {
+          clearInterval(iv);
+          recorder.stop();
+          return;
+        }
+        const frameImg = new Image();
+        frameImg.onload = () => {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(frameImg, 0, 0);
+        };
+        frameImg.src = frames[fi];
+        fi++;
+      }, 1000 / fps);
+    };
+    img.src = frames[0];
+  });
+}
+
+async function convertToMp4(webmBlob) {
+  try {
+    const { createFFmpeg, fetchFile } = FFmpeg;
+    const ffmpeg = createFFmpeg({log: false});
+    await ffmpeg.load();
+    ffmpeg.FS('writeFile', 'input.webm', await fetchFile(webmBlob));
+    await ffmpeg.run('-i', 'input.webm', '-c:v', 'libx264', '-preset', 'fast', '-crf', '23', 'output.mp4');
+    const data = ffmpeg.FS('readFile', 'output.mp4');
+    return new Blob([data.buffer], {type: 'video/mp4'});
+  } catch (e) {
+    console.error('MP4 conversion failed:', e);
+    alert('MP4 conversion requires a server or ffmpeg.wasm CORS headers. Downloading WebM instead.');
+    return null;
+  }
+}
+
+id$('g-dl-webm').addEventListener('click', async () => {
+  const btn = id$('g-dl-webm');
+  btn.disabled = true; btn.textContent = 'Recording...';
+  const frames = await captureAllFrames();
+  const fps = parseInt(val('g-fps')) || 10;
+  const blob = await recordVideoAsWebM(frames, fps);
+  saveAs(blob, `${val('g-algo')}_${val('g-problem')}_animation.webm`);
+  btn.disabled = false; btn.textContent = 'Download Video (WebM)';
+});
+
+id$('g-dl-mp4').addEventListener('click', async () => {
+  const btn = id$('g-dl-mp4');
+  btn.disabled = true; btn.textContent = 'Converting to MP4...';
+  const frames = await captureAllFrames();
+  const fps = parseInt(val('g-fps')) || 10;
+  const webmBlob = await recordVideoAsWebM(frames, fps);
+  const mp4Blob = await convertToMp4(webmBlob);
+  if (mp4Blob) saveAs(mp4Blob, `${val('g-algo')}_${val('g-problem')}_animation.mp4`);
+  else saveAs(webmBlob, `${val('g-algo')}_${val('g-problem')}_animation.webm`);
+  btn.disabled = false; btn.textContent = 'Download Video (MP4)';
+});
+
+// ============================================================
+// TAB 2: Trajectory Plot NPComp
+// ============================================================
+let tData = {}, tCharts = [null,null,null,null], tPlayInterval = null, tHistoryMaxIter = 0;
+
+function tBuildRunParams(algo) {
+  const seed = parseInt(val('t-seed'));
+  const iters = parseInt(val('t-iters'));
+  const pop = parseInt(val('t-pop'));
+  const ndims = parseInt(val('t-ndims'));
+  const problem = val('t-problem');
+  return {seed, iters, pop, ndims, problem, algo};
+}
+
+function tRunOne(algo) {
+  const {seed, iters, pop, ndims, problem} = tBuildRunParams(algo);
+  const probInst = problem === 'partition' ? new A.PartitionReal(seed, ndims) : new A.SubsetReal(seed, ndims);
+  const Cls = ALGO_CLASSES[algo];
+  const mh = new Cls(probInst.min_x, probInst.max_x, probInst.ndim, false,
+    (p) => probInst.objectiveFunction(p), (p) => probInst.repairFunction(p), (p) => probInst.preprocessFunction(p));
+
+  const iterations = [];
+  const fitnesses = [];
+  const defaults = {
+    AFSA: {stagnationVariation:0.2,itsStagnation:5,leapPercentage:0.5,velocityPercentage:0.3,nPointsToChoose:1,crowdedPercentage:0.9,visualDistancePercentage:0.1},
+    PSO: {omega:0.5,phiP:1,phiG:1},
+    PSOWL: {omega:0.5,phiP:1,phiG:1,stagnationVariation:0.2,itsStagnation:5,leapPercentage:0.5},
+    Greedy: {},
+    GreedyWL: {stagnationVariation:0.2,itsStagnation:5,leapPercentage:0.5},
+    ABC: {limit:20},
+    ACO: {evaporation_rate:0.1,alpha:1.0,beta:2.0},
+    Bat: {fmin:0,fmax:2,A:0.5,r0:0.5},
+    Blackhole: {},
+    Cuckoo: {pa:0.25},
+    Firefly: {alpha:0.5,beta0:1.0,gamma:1.0},
+    Harmony: {hmcr:0.9,par:0.3,bw:0.2}
+  };
+  const gen = gDispatchRunYielded(mh, algo, iters, pop, seed, defaults[algo] || {});
+  for (const r of gen) {
+    iterations.push(r.iteration);
+    fitnesses.push(r.bestFitness);
+  }
+  return {algo, iterations, fitnesses};
+}
+
+id$('t-run').addEventListener('click', () => {
+  if (tPlayInterval) { clearInterval(tPlayInterval); tPlayInterval = null; }
+  const algos = Array.from(document.querySelectorAll('.t-algo-cb:checked')).map(cb => cb.value);
+  if (algos.length === 0) { alert('Select at least one algorithm'); return; }
+
+  id$('t-run').disabled = true;
+  id$('t-run').textContent = 'Running...';
+  id$('t-progress').style.width = '0%';
+
+  setTimeout(() => {
+    tData = {};
+    tHistoryMaxIter = 0;
+    let done = 0;
+    algos.forEach(algo => {
+      try {
+        const result = tRunOne(algo);
+        tData[algo] = result;
+        tHistoryMaxIter = Math.max(tHistoryMaxIter, result.iterations.length);
+      } catch(e) {
+        console.error(`${algo} failed:`, e);
+      }
+      done++;
+      id$('t-progress').style.width = ((done / algos.length) * 100) + '%';
+    });
+
+    tRenderCharts();
+    id$('t-slider').max = tHistoryMaxIter - 1;
+    id$('t-slider').value = tHistoryMaxIter - 1;
+    id$('t-slider').disabled = false;
+    id$('t-play').disabled = false;
+    id$('t-stop').disabled = false;
+    id$('t-dl-zip').disabled = false;
+    id$('t-dl-webm').disabled = false;
+    id$('t-dl-mp4').disabled = false;
+    id$('t-run').disabled = false;
+    id$('t-run').textContent = 'Run Optimization';
+    id$('t-progress').style.width = '100%';
+  }, 50);
+});
+
+function tRenderCharts(upToIter) {
+  const algoKeys = Object.keys(tData);
+  if (algoKeys.length === 0) return;
+  const maxIter = upToIter !== undefined ? upToIter : tHistoryMaxIter - 1;
+  const colors = ['#e6194b','#3cb44b','#ffe119','#4363d8','#f58231','#911eb4','#42d4f4','#f032e6','#bfef45','#fabed4','#469990','#dcbeff'];
+
+  tCharts.forEach(c => { if (c) c.destroy(); });
+
+  const iterLabels = [];
+  for (let i = 0; i <= maxIter; i++) iterLabels.push(i + 1);
+
+  // Chart 1: Main trajectory
+  const ds1 = algoKeys.map((algo, idx) => ({
+    label: algo,
+    data: tData[algo].fitnesses.slice(0, maxIter + 1),
+    borderColor: colors[idx % colors.length],
+    borderWidth: 2,
+    pointRadius: 2,
+    fill: false,
+    tension: 0.1
+  }));
+  tCharts[0] = new Chart(id$('t-chart1').getContext('2d'), {
+    type: 'line',
+    data: {labels: iterLabels, datasets: ds1},
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: false,
+      title: {display: true, text: 'Convergence Trajectories', font: {size: 13}},
+      scales: {x: {title: {display: true, text: 'Iteration'}}, y: {title: {display: true, text: 'Best Fitness'}}},
+      plugins: {legend: {position: 'bottom', labels: {boxWidth: 12, font: {size: 10}}}}
+    }
+  });
+
+  // Chart 2: Semi-log
+  const ds2 = algoKeys.map((algo, idx) => ({
+    label: algo,
+    data: tData[algo].fitnesses.slice(0, maxIter + 1).map(v => Math.abs(v) > 0 ? Math.log10(Math.abs(v)) : -20),
+    borderColor: colors[idx % colors.length],
+    borderWidth: 2,
+    pointRadius: 2,
+    fill: false,
+    tension: 0.1
+  }));
+  tCharts[1] = new Chart(id$('t-chart2').getContext('2d'), {
+    type: 'line',
+    data: {labels: iterLabels, datasets: ds2},
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: false,
+      title: {display: true, text: 'Semi-log Convergence', font: {size: 13}},
+      scales: {x: {title: {display: true, text: 'Iteration'}}, y: {title: {display: true, text: 'log10(|Fitness|)'}}},
+      plugins: {legend: {position: 'bottom', labels: {boxWidth: 12, font: {size: 10}}}}
+    }
+  });
+
+  // Chart 3: Fitness over time line (seaborn style)
+  const ds3 = algoKeys.map((algo, idx) => ({
+    label: algo,
+    data: tData[algo].fitnesses.slice(0, maxIter + 1),
+    borderColor: colors[idx % colors.length],
+    backgroundColor: colors[idx % colors.length] + '20',
+    borderWidth: 2,
+    pointRadius: 3,
+    pointBackgroundColor: colors[idx % colors.length],
+    fill: false,
+    tension: 0.2
+  }));
+  tCharts[2] = new Chart(id$('t-chart3').getContext('2d'), {
+    type: 'line',
+    data: {labels: iterLabels, datasets: ds3},
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: false,
+      title: {display: true, text: 'Convergence Comparison', font: {size: 13}},
+      scales: {x: {title: {display: true, text: 'Iteration'}}, y: {title: {display: true, text: 'Best Fitness'}}},
+      plugins: {legend: {position: 'bottom', labels: {boxWidth: 12, font: {size: 10}}}}
+    }
+  });
+
+  // Chart 4: Final comparison bar
+  const finalVals = algoKeys.map(algo => {
+    const f = tData[algo].fitnesses;
+    return f[Math.min(maxIter, f.length - 1)];
+  });
+  tCharts[3] = new Chart(id$('t-chart4').getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: algoKeys,
+      datasets: [{
+        label: 'Final Fitness',
+        data: finalVals,
+        backgroundColor: algoKeys.map((_, idx) => colors[idx % colors.length] + 'AA'),
+        borderColor: algoKeys.map((_, idx) => colors[idx % colors.length]),
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: false,
+      title: {display: true, text: 'Final Comparison', font: {size: 13}},
+      scales: {y: {title: {display: true, text: 'Best Fitness'}}, x: {ticks: {font: {size: 9}}}},
+      plugins: {legend: {display: false}}
+    }
+  });
+
+  id$('t-slider-label').textContent = `Iteration ${maxIter + 1} / ${tHistoryMaxIter}`;
+  id$('t-info').textContent = `Algorithms: ${algoKeys.join(', ')} | Problem: ${val('t-problem')} | Dims: ${val('t-ndims')}`;
+}
+
+id$('t-slider').addEventListener('input', () => {
+  const v = parseInt(id$('t-slider').value);
+  tRenderCharts(v);
+});
+
+id$('t-play').addEventListener('click', () => {
+  if (tPlayInterval) clearInterval(tPlayInterval);
+  const fps = parseInt(val('t-fps')) || 10;
+  let idx = 0;
+  tPlayInterval = setInterval(() => {
+    idx++;
+    if (idx >= tHistoryMaxIter) idx = 0;
+    id$('t-slider').value = idx;
+    tRenderCharts(idx);
+  }, 1000 / fps);
+});
+
+id$('t-stop').addEventListener('click', () => {
+  if (tPlayInterval) { clearInterval(tPlayInterval); tPlayInterval = null; }
+});
+
+async function tCaptureAllFrames() {
+  const origIdx = parseInt(id$('t-slider').value);
+  const frames = [];
+  for (let i = 0; i < tHistoryMaxIter; i++) {
+    tRenderCharts(i);
+    await new Promise(r => setTimeout(r, 30));
+    const canvases = [id$('t-chart1'), id$('t-chart2'), id$('t-chart3'), id$('t-chart4')];
+    const combined = document.createElement('canvas');
+    combined.width = 1200; combined.height = 800;
+    const ctx = combined.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, 1200, 800);
+    const positions = [{x:0,y:0,w:600,h:400},{x:600,y:0,w:600,h:400},{x:0,y:400,w:600,h:400},{x:600,y:400,w:600,h:400}];
+    canvases.forEach((c, i) => {
+      const p = positions[i];
+      ctx.drawImage(c, p.x, p.y, p.w, p.h);
+    });
+    frames.push(combined.toDataURL('image/png'));
+  }
+  tRenderCharts(origIdx);
+  return frames;
+}
+
+id$('t-dl-zip').addEventListener('click', async () => {
+  const btn = id$('t-dl-zip');
+  btn.disabled = true; btn.textContent = 'Generating ZIP...';
+  const frames = await tCaptureAllFrames();
+  const zip = new JSZip();
+  frames.forEach((f, i) => {
+    zip.file(`trajectory_${String(i).padStart(4,'0')}.png`, f.split(',')[1], {base64: true});
+  });
+  const blob = await zip.generateAsync({type: 'blob'});
+  saveAs(blob, `trajectory_plots.zip`);
+  btn.disabled = false; btn.textContent = 'Download ZIP (Images)';
+});
+
+id$('t-dl-webm').addEventListener('click', async () => {
+  const btn = id$('t-dl-webm');
+  btn.disabled = true; btn.textContent = 'Recording...';
+  const frames = await tCaptureAllFrames();
+  const fps = parseInt(val('t-fps')) || 10;
+  const blob = await recordVideoAsWebM(frames, fps);
+  saveAs(blob, 'trajectory_animation.webm');
+  btn.disabled = false; btn.textContent = 'Download Video (WebM)';
+});
+
+id$('t-dl-mp4').addEventListener('click', async () => {
+  const btn = id$('t-dl-mp4');
+  btn.disabled = true; btn.textContent = 'Converting to MP4...';
+  const frames = await tCaptureAllFrames();
+  const fps = parseInt(val('t-fps')) || 10;
+  const webmBlob = await recordVideoAsWebM(frames, fps);
+  const mp4Blob = await convertToMp4(webmBlob);
+  if (mp4Blob) saveAs(mp4Blob, 'trajectory_animation.mp4');
+  else saveAs(webmBlob, 'trajectory_animation.webm');
+  btn.disabled = false; btn.textContent = 'Download Video (MP4)';
+});
+
+// ============================================================
+// TAB 3: Genetic Categorical Plot
+// ============================================================
+let cHistory = [], cChart = null, cPlayInterval = null, cCategories = null, cCatColors = null, cProb = null;
+
+function cSetupProblem() {
+  const prob = val('c-problem');
+  const seed = parseInt(val('c-seed'));
+  const dims = parseInt(val('c-dims'));
+
+  if (prob === 'knapsack') {
+    const cap = Math.floor(dims * 0.5 * 10);
+    cProb = new A.KnapsackCategorical(cap, dims, seed, 20, 20);
+    cCategories = cProb.getPossibleCategories();
+  } else if (prob === 'sudoku') {
+    cProb = {type: 'sudoku', instance: new A.Sudoku()};
+    cCategories = Array.from({length: 81}, () => [1,2,3,4,5,6,7,8,9]);
+  } else {
+    cProb = {type: 'sudoku_opt', instance: new A.SudokuOptimized()};
+    cCategories = cProb.instance.getCategories();
+  }
+
+  const uniqueCats = new Set();
+  cCategories.forEach(cl => cl.forEach(c => uniqueCats.add(c)));
+  const sorted = [...uniqueCats].sort((a,b) => String(a).localeCompare(String(b)));
+  const palette = ['#e6194b','#3cb44b','#ffe119','#4363d8','#f58231','#911eb4','#42d4f4','#f032e6','#bfef45','#fabed4'];
+  cCatColors = {};
+  sorted.forEach((c, i) => { cCatColors[c] = palette[i % palette.length]; });
+}
+
+id$('c-run').addEventListener('click', () => {
+  if (cPlayInterval) { clearInterval(cPlayInterval); cPlayInterval = null; }
+
+  const seed = parseInt(val('c-seed'));
+  const iters = parseInt(val('c-iters'));
+  const pop = parseInt(val('c-pop'));
+  const elitist = parseFloat(val('c-elitist'));
+  const mutability = parseFloat(val('c-mut'));
+  const fidelity = val('c-fidelity') === '1';
+  const pmut = val('c-pmut') === '1';
+  const useLeap = val('c-leap') === '1';
+  const prob = val('c-problem');
+  const dims = parseInt(val('c-dims'));
+
+  id$('c-run').disabled = true;
+  id$('c-run').textContent = 'Running...';
+
+  setTimeout(() => {
+    try {
+      cSetupProblem();
+      let ndims, toMax, objFunc, repFunc, preFunc;
+
+      if (prob === 'knapsack') {
+        ndims = dims;
+        toMax = true;
+        objFunc = (p) => { const v = cProb.objectiveFunction(p); return v === false ? 0 : v; };
+        repFunc = (p) => cProb.repairFunction(p);
+        preFunc = (p) => cProb.preprocessFunction(p);
+      } else if (prob === 'sudoku') {
+        ndims = 81;
+        toMax = false;
+        objFunc = (p) => {
+          const old = cProb.instance.state;
+          cProb.instance.state = p.reduce((a,v,i) => { const row = Math.floor(i/9); if(!a[row]) a[row]=[]; a[row].push(v); return a; }, []);
+          const v = cProb.instance.getViolations();
+          cProb.instance.state = old;
+          return v;
+        };
+        repFunc = (p) => p;
+        preFunc = (p) => p;
+      } else {
+        ndims = 81;
+        toMax = false;
+        objFunc = (p) => cProb.instance.objectiveFunction(p);
+        repFunc = (p) => cProb.instance.repairFunction(p);
+        preFunc = (p) => cProb.instance.preprocessFunction(p);
+      }
+
+      const Cls = useLeap ? A.GeneticMH_Categorical_WithLeap : A.GeneticMH_Categorical;
+      const mh = new Cls(cCategories, ndims, toMax, objFunc, repFunc, preFunc);
+
+      cHistory = [];
+      const gen = mh.runYielded(iters, pop, elitist, mutability, fidelity, pmut, seed, false);
+      for (const r of gen) {
+        cHistory.push(r);
+      }
+
+      id$('c-slider').max = cHistory.length - 1;
+      id$('c-slider').value = 0;
+      id$('c-slider').disabled = false;
+      id$('c-play').disabled = false;
+      id$('c-stop').disabled = false;
+      id$('c-dl-zip').disabled = false;
+      id$('c-dl-webm').disabled = false;
+      id$('c-dl-mp4').disabled = false;
+      cRenderFrame(0);
+    } catch (e) {
+      id$('c-info').textContent = 'Error: ' + e.message;
+      console.error(e);
+    }
+    id$('c-run').disabled = false;
+    id$('c-run').textContent = 'Run Optimization';
+  }, 50);
+});
+
+function cRenderFrame(idx) {
+  if (idx < 0 || idx >= cHistory.length) return;
+  const d = cHistory[idx];
+  const cattype = val('c-cattype');
+  const prob = val('c-problem');
+
+  id$('c-slider-label').textContent = `Iteration ${d.iteration} (${idx+1} / ${cHistory.length})`;
+  id$('c-info').textContent = `Best Fitness: ${d.bestFitness.toFixed(4)} | Problem: ${prob}`;
+
+  const popSize = d.points.length;
+  const ndims = d.points[0].length;
+  const cellW = Math.max(16, Math.min(30, 800 / ndims));
+  const cellH = Math.max(14, Math.min(24, 500 / popSize));
+  const canvas = id$('c-canvas');
+  canvas.width = ndims * cellW + 4;
+  canvas.height = popSize * cellH + 4;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  for (let i = 0; i < popSize; i++) {
+    for (let j = 0; j < ndims; j++) {
+      const val_ = d.points[i][j];
+      const x = j * cellW + 2;
+      const y = i * cellH + 2;
+
+      if (cattype === 'color' || cattype === 'colorvalue') {
+        ctx.fillStyle = cCatColors[val_] || '#ffffff';
+        ctx.fillRect(x, y, cellW - 1, cellH - 1);
+      }
+      ctx.strokeStyle = '#d1d5db';
+      ctx.strokeRect(x, y, cellW - 1, cellH - 1);
+
+      if (cattype !== 'color') {
+        let txt = String(val_);
+        if (cattype === 'character') txt = String(val_)[0];
+        ctx.fillStyle = '#000';
+        ctx.font = `${Math.max(8, cellH * 0.6)}px monospace`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(txt, x + cellW / 2, y + cellH / 2);
+      }
+    }
+  }
+
+  // Fitness bar chart
+  if (cChart) cChart.destroy();
+  const fLabels = d.fitnesses.map((_, i) => `S${i}`);
+  const fColors = d.fitnesses.map((_, i) => `hsl(${(i * 360 / popSize) % 360}, 60%, 60%)`);
+  cChart = new Chart(id$('c-chart').getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: fLabels,
+      datasets: [{
+        label: 'Fitness',
+        data: d.fitnesses,
+        backgroundColor: fColors
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: false,
+      indexAxis: 'y',
+      title: {display: true, text: `Fitness - It ${d.iteration}`, font: {size: 12}},
+      scales: {
+        x: {title: {display: true, text: 'Fitness'}},
+        y: {ticks: {font: {size: 8}}}
+      },
+      plugins: {legend: {display: false}}
+    }
+  });
+}
+
+id$('c-slider').addEventListener('input', () => {
+  cRenderFrame(parseInt(id$('c-slider').value));
+});
+
+id$('c-play').addEventListener('click', () => {
+  if (cPlayInterval) clearInterval(cPlayInterval);
+  const fps = parseInt(val('c-fps')) || 5;
+  let idx = parseInt(id$('c-slider').value);
+  cPlayInterval = setInterval(() => {
+    idx++;
+    if (idx >= cHistory.length) idx = 0;
+    id$('c-slider').value = idx;
+    cRenderFrame(idx);
+  }, 1000 / fps);
+});
+
+id$('c-stop').addEventListener('click', () => {
+  if (cPlayInterval) { clearInterval(cPlayInterval); cPlayInterval = null; }
+});
+
+async function cCaptureAllFrames() {
+  const origIdx = parseInt(id$('c-slider').value);
+  const frames = [];
+  for (let i = 0; i < cHistory.length; i++) {
+    cRenderFrame(i);
+    await new Promise(r => setTimeout(r, 20));
+    const popCanvas = id$('c-canvas');
+    const fitCanvas = id$('c-chart');
+    const combined = document.createElement('canvas');
+    combined.width = popCanvas.width + 300;
+    combined.height = Math.max(popCanvas.height, 500);
+    const ctx = combined.getContext('2d');
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, combined.width, combined.height);
+    ctx.drawImage(popCanvas, 0, 0);
+    ctx.drawImage(fitCanvas, popCanvas.width + 10, 0, 280, combined.height);
+    frames.push(combined.toDataURL('image/png'));
+  }
+  cRenderFrame(origIdx);
+  return frames;
+}
+
+id$('c-dl-zip').addEventListener('click', async () => {
+  const btn = id$('c-dl-zip');
+  btn.disabled = true; btn.textContent = 'Generating ZIP...';
+  const frames = await cCaptureAllFrames();
+  const zip = new JSZip();
+  frames.forEach((f, i) => {
+    zip.file(`gen_cat_${String(i).padStart(4,'0')}.png`, f.split(',')[1], {base64: true});
+  });
+  const blob = await zip.generateAsync({type: 'blob'});
+  saveAs(blob, `genetic_${val('c-problem')}_plots.zip`);
+  btn.disabled = false; btn.textContent = 'Download ZIP (Images)';
+});
+
+id$('c-dl-webm').addEventListener('click', async () => {
+  const btn = id$('c-dl-webm');
+  btn.disabled = true; btn.textContent = 'Recording...';
+  const frames = await cCaptureAllFrames();
+  const fps = parseInt(val('c-fps')) || 5;
+  const blob = await recordVideoAsWebM(frames, fps);
+  saveAs(blob, `genetic_${val('c-problem')}_animation.webm`);
+  btn.disabled = false; btn.textContent = 'Download Video (WebM)';
+});
+
+id$('c-dl-mp4').addEventListener('click', async () => {
+  const btn = id$('c-dl-mp4');
+  btn.disabled = true; btn.textContent = 'Converting to MP4...';
+  const frames = await cCaptureAllFrames();
+  const fps = parseInt(val('c-fps')) || 5;
+  const webmBlob = await recordVideoAsWebM(frames, fps);
+  const mp4Blob = await convertToMp4(webmBlob);
+  if (mp4Blob) saveAs(mp4Blob, `genetic_${val('c-problem')}_animation.mp4`);
+  else saveAs(webmBlob, `genetic_${val('c-problem')}_animation.webm`);
+  btn.disabled = false; btn.textContent = 'Download Video (MP4)';
+});
+
+})();
+</script>
+</body>
+</html>
