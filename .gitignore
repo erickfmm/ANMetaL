@@ -110,3 +110,11 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+# Node
+node_modules/
+dist/
+
+
+.opencode
+!.opencode/commands/
